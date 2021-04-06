@@ -312,14 +312,23 @@ namespace ExcelDna.IntelliSense
         void FormulaEditTextChange(string formulaPrefix, Rect editWindowBounds, IntPtr excelToolTipWindow)
         {
             Debug.Print($"^^^ FormulaEditStateChanged. CurrentPrefix: {formulaPrefix}, Thread {Thread.CurrentThread.ManagedThreadId}");
-            string functionName;
-            int currentArgIndex;
-            if (FormulaParser.TryGetFormulaInfo(formulaPrefix, out functionName, out currentArgIndex))
+
+            var couldGet = FormulaParser.TryGetFormulaInfo(formulaPrefix, out string functionName, out int currentArgIndex);
+
+            IntelliSenseEvents.Instance.OnEditingFunction(functionName);
+
+            if (!couldGet)
+            {
+                IntelliSenseEvents.Instance.OnEditingArgument(null, null);
+            }
+            else
             {
                 FunctionInfo functionInfo;
+
                 if (_functionInfoMap.TryGetValue(functionName, out functionInfo))
                 {
                     var lineBeforeFunctionName = FormulaParser.GetLineBeforeFunctionName(formulaPrefix, functionName);
+                    
                     // We have a function name and we want to show info
                     if (_argumentsToolTip != null)
                     {
@@ -353,11 +362,10 @@ namespace ExcelDna.IntelliSense
                     }
                     return;
                 }
-
             }
 
             // All other paths, we hide the box
-           _argumentsToolTip?.Hide();
+            _argumentsToolTip?.Hide();
         }
 
 
@@ -424,7 +432,7 @@ namespace ExcelDna.IntelliSense
                     try
                     {
                         _descriptionToolTip?.ShowToolTip(
-                            text: new FormattedText { descriptionLines },
+                            text: new FormattedText { GetFunctionDescriptionOrNull(functionInfo) },
                             linePrefix: null,
                             left: (int)listBounds.Right + DescriptionLeftMargin,
                             top: (int)selectedItemBounds.Bottom - 18,
@@ -529,10 +537,23 @@ namespace ExcelDna.IntelliSense
             var descriptionLines = GetFunctionDescriptionOrNull(functionInfo);
 
             var formattedText = new FormattedText { nameLine, descriptionLines };
+
             if (argumentList.Count > currentArgIndex)
             {
-                var description = GetArgumentDescription(argumentList[currentArgIndex]);
-                formattedText.Add(description);
+                var currentArgument = argumentList[currentArgIndex];
+                IntelliSenseEvents.Instance.OnEditingArgument(currentArgument.Name, currentArgIndex);
+
+                var description = GetArgumentDescriptionOrNull(currentArgument);
+
+                if (description != null)
+                {
+                    formattedText.Add(description);
+                }
+
+                foreach (var additionalDescriptionLine in IntelliSenseEvents.Instance.RaiseCollectingArgumentDescription())
+                {
+                    formattedText.Add(additionalDescriptionLine);
+                }
             }
 
             return formattedText;
@@ -582,13 +603,12 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        IEnumerable<TextLine> GetArgumentDescription(FunctionInfo.ArgumentInfo argumentInfo)
+        TextLine GetArgumentDescriptionOrNull(FunctionInfo.ArgumentInfo argumentInfo)
         {
             if (string.IsNullOrEmpty(argumentInfo.Description))
-                yield break;
+                return null;
 
-            var lines = argumentInfo.Description.Split(s_newLineStringArray, StringSplitOptions.None);
-            yield return new TextLine {
+            return new TextLine { 
                     new TextRun
                     {
                         Style = System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Italic,
@@ -597,19 +617,9 @@ namespace ExcelDna.IntelliSense
                     new TextRun
                     {
                         Style = System.Drawing.FontStyle.Italic,
-                        Text = lines.FirstOrDefault() ?? ""
+                        Text = argumentInfo.Description ?? ""
                     },
                 };
-
-            foreach (var line in lines.Skip(1))
-            {
-                yield return new TextLine {
-                    new TextRun
-                    {
-                        Style = System.Drawing.FontStyle.Italic,
-                        Text = line
-                    }};
-            }
         }
 
         public void Dispose()

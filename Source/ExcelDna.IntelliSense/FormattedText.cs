@@ -33,7 +33,7 @@ namespace ExcelDna.IntelliSense
         public override string ToString() => string.Join("\r\n", _lines.Select(l => l.ToString()));
     }
 
-    class TextLine : IEnumerable<TextRun>
+    public class TextLine : IEnumerable<TextRun>
     {
         readonly List<TextRun> _runs;
 
@@ -51,7 +51,7 @@ namespace ExcelDna.IntelliSense
         public override string ToString() => string.Concat(_runs.Select(r => r.Text));
     }
 
-    class TextRun
+    public class TextRun
     {
         public string Text { get; set; }
         public FontStyle Style { get; set; }    

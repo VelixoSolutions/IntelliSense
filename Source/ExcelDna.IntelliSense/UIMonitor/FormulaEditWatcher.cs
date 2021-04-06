@@ -1,4 +1,6 @@
-﻿using ExcelDna.IntelliSense.Util;
+﻿#nullable enable
+
+using ExcelDna.IntelliSense.Util;
 using System;
 using System.Diagnostics;
 using System.Threading;
@@ -42,10 +44,12 @@ namespace ExcelDna.IntelliSense
         readonly static StateChangeEventArgs s_stateChangeTextChange = new StateChangeEventArgs(StateChangeType.TextChange);
 
         // NOTE: Our event will always be raised on the _syncContextAuto thread (CONSIDER: Does this help?)
-        public event EventHandler<StateChangeEventArgs> StateChanged;
+        public event EventHandler<StateChangeEventArgs>? StateChanged;
 
         public bool IsEditingFormula { get; set; }
-        public string CurrentPrefix { get; set; }    // Null if not editing
+        
+        public string? CurrentPrefix { get; set; }    // Null if not editing
+
         // We don't really care whether it is the formula bar or in-cell, 
         // we just need to get the right window handle 
         public Rect EditWindowBounds { get; set; }
@@ -72,8 +76,8 @@ namespace ExcelDna.IntelliSense
         readonly SynchronizationContext _syncContextMain;
 
         readonly WindowWatcher _windowWatcher;          // Passed in
-
-        WindowLocationWatcher _windowLocationWatcher;  // Managed here
+        
+        WindowLocationWatcher? _windowLocationWatcher;  // Managed here
         readonly RenewableDelayExecutor _updateEditStateAfterTimeout;
 
         IntPtr _hwndFormulaBar;
@@ -296,7 +300,8 @@ namespace ExcelDna.IntelliSense
         // Runs on our Automation thread
         void UninstallLocationMonitor()
         {
-            WindowLocationWatcher tempWatcher = Interlocked.Exchange(ref _windowLocationWatcher, null);
+            WindowLocationWatcher? tempWatcher = Interlocked.Exchange(ref _windowLocationWatcher, null);
+            
             if (tempWatcher != null)
             {
                 _syncContextMain.Post(disp => ((IDisposable)disp).Dispose(), tempWatcher);
@@ -332,9 +337,11 @@ namespace ExcelDna.IntelliSense
         {
             Logger.WindowWatcher.Verbose($"> FormulaEdit UpdateEditState - Thread {Thread.CurrentThread.ManagedThreadId}");
             Logger.WindowWatcher.Verbose($"FormulaEdit UpdateEditState - Focus: {_formulaEditFocus} Window: {(_formulaEditFocus == FormulaEditFocus.FormulaBar ? _hwndFormulaBar : _hwndInCellEdit)}");
-
+            
             IntPtr hwnd = IntPtr.Zero;
+            
             bool prefixChanged = false;
+
             if (_formulaEditFocus == FormulaEditFocus.FormulaBar)
             {
                 hwnd = _hwndFormulaBar;
@@ -347,11 +354,15 @@ namespace ExcelDna.IntelliSense
             {
                 // Neither have the focus, so we don't update anything
                 Logger.WindowWatcher.Verbose("FormulaEdit UpdateEditState End formula editing");
+                
                 CurrentPrefix = null;
+
                 if (IsEditingFormula)
                     UninstallLocationMonitor();
+                
                 IsEditingFormula = false;
                 prefixChanged = true;
+
                 // Debug.Print("#### FormulaEditWatcher - No Window " + Environment.StackTrace);
             }
 
@@ -367,11 +378,13 @@ namespace ExcelDna.IntelliSense
                 }
 
                 var newPrefix = XlCall.GetFormulaEditPrefix();  // What thread do we have to use here ...?
+
                 if (CurrentPrefix != newPrefix)
                 {
                     CurrentPrefix = newPrefix;
                     prefixChanged = true;
                 }
+
                 Logger.WindowWatcher.Verbose($"FormulaEdit UpdateEditState Formula editing: CurrentPrefix {CurrentPrefix}, EditWindowBounds: {EditWindowBounds}");
             }
 
@@ -421,7 +434,8 @@ namespace ExcelDna.IntelliSense
             _windowWatcher.InCellEditWindowChanged -= _windowWatcher_InCellEditWindowChanged;
 
             // Can't call UninstallLocationMonitor - we might be shutting down on the main thread, and don't want to post
-            WindowLocationWatcher tempWatcher = Interlocked.Exchange(ref _windowLocationWatcher, null);
+            WindowLocationWatcher? tempWatcher = Interlocked.Exchange(ref _windowLocationWatcher, null);
+
             if (tempWatcher != null)
             {
                 tempWatcher.Dispose();

@@ -29,6 +29,8 @@ namespace ExcelDna.IntelliSense
         {
             _syncContextMain = syncContextMain;
 
+            IntelliSenseEvents.Instance.OnIntellisenseInvalidated += OnNewIntelliSenseDataAvailable;
+
             // Make a separate thread and set to MTA, according to: https://msdn.microsoft.com/en-us/library/windows/desktop/ee671692%28v=vs.85%29.aspx
             // This thread was initially intended for UI Automation calls, particularly adding and removing event handlers.
             var threadAuto = new Thread(RunUIAutomation);
@@ -36,6 +38,19 @@ namespace ExcelDna.IntelliSense
             threadAuto.Name = "ExcelDna.Intellisense.WatcherThread";
             threadAuto.SetApartmentState(ApartmentState.MTA);
             threadAuto.Start();
+        }
+
+        private void OnNewIntelliSenseDataAvailable(object sender, EventArgs e)
+        {
+            _syncContextMain.Post(_ =>
+            {
+                if (!(CurrentState is UIState.FormulaEdit))
+                {
+                    return;
+                }
+
+                StateUpdate?.Invoke(this, new UIStateUpdate(CurrentState, CurrentState, UIStateUpdate.UpdateType.FormulaEditTextChange));
+            }, null);
         }
 
         // This runs on the new thread we've created to do all the Automation stuff (_threadAuto)
@@ -273,6 +288,8 @@ namespace ExcelDna.IntelliSense
         {
             Debug.Assert(Thread.CurrentThread.ManagedThreadId == 1);
             Logger.Monitor.Info($"UIMonitor Dispose Begin");
+
+            IntelliSenseEvents.Instance.OnIntellisenseInvalidated -= OnNewIntelliSenseDataAvailable;
 
             // Remove all event handlers ASAP
             // Since we are running on the main thread, we call Dispose directly

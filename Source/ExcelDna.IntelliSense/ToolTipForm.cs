@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ExcelDna.IntelliSense.Properties;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -20,7 +21,7 @@ namespace ExcelDna.IntelliSense
         Win32Window _owner;
         // Help Link
         Rectangle _linkClientRect;
-        bool _linkActive;
+        bool _isHoveringOverLink;
         string _linkAddress;
         long _showTimeTicks; // Track to prevent mouse click-through into help
         // Mouse Capture information for moving        
@@ -60,11 +61,23 @@ namespace ExcelDna.IntelliSense
 
             };
             _textColor = Color.FromArgb(72, 72, 72);
-            _linkColor = Color.Blue;
+            _linkColor = Color.DarkBlue;
             _borderPen = new Pen(Color.FromArgb(195, 195, 195));
             _borderLightPen = new Pen(Color.FromArgb(225, 225, 225));
             SetStyle(ControlStyles.UserMouse | ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint, true);
             Debug.Print($"Created ToolTipForm with owner {hwndOwner}");
+        }
+
+        private Font GetFont(FontStyle style)
+        {
+            _fonts.TryGetValue(style, out var font);
+
+            if (font == null)
+            {
+                _fonts[style] = font = new Font("Segoe UI", 9, style);
+            }
+
+            return font;
         }
 
         protected override void WndProc(ref Message m)
@@ -121,7 +134,13 @@ namespace ExcelDna.IntelliSense
             Debug.Print($"@@@ ShowToolTip - Old TopOffset: {_topOffset}, New TopOffset: {topOffset}");
             _text = text;
             _linePrefixWidth = MeasureFormulaStringWidth(linePrefix);
+            
             left += _linePrefixWidth;
+
+            // Mimic Excel native tooltip behaviour: it never goes beyond the screen's leftmost boundary.
+            // -
+            left = Math.Max(0, left);
+
             if (left != _showLeft || top != _showTop || topOffset != _topOffset || listLeft != _listLeft)
             {
                 // Update the start position and the current position
@@ -132,6 +151,7 @@ namespace ExcelDna.IntelliSense
                 _topOffset = topOffset;
                 _listLeft = listLeft;
             }
+
             if (!Visible)
             {
                 Debug.Print($"ShowToolTip - Showing ToolTipForm: {linePrefix} => {_text.ToString()}");
@@ -219,17 +239,18 @@ namespace ExcelDna.IntelliSense
                 Invalidate();
                 return;
             }
-            var inLink = _linkClientRect.Contains(PointToClient(screenLocation));
-            if ((inLink && !_linkActive) ||
-                (!inLink && _linkActive))
+
+            bool isHoveringOverlink = _linkClientRect.Contains(PointToClient(screenLocation));
+
+            if (isHoveringOverlink != _isHoveringOverLink)
             {
-                _linkActive = !_linkActive;
+                _isHoveringOverLink = !_isHoveringOverLink;
                 Invalidate();
             }
-            if (inLink)
-                Cursor.Current = Cursors.Hand;
-            else
-                Cursor.Current = Cursors.SizeAll;
+
+            Cursor.Current = isHoveringOverlink 
+                ? Cursors.Hand 
+                : Cursors.SizeAll;
         }
 
         void MouseButtonUp(Point screenLocation)
@@ -343,14 +364,15 @@ namespace ExcelDna.IntelliSense
                     // We support only a single link, for now
                     Font font;
                     Color color;
-                    if (run.IsLink && _linkActive)
+
+                    if (run.IsLink)
                     {
-                        font = _fonts[FontStyle.Underline];
+                        font = _isHoveringOverLink ? GetFont(FontStyle.Underline) : GetFont(run.Style);
                         color = _linkColor;
                     }
                     else
                     {
-                        font = _fonts[run.Style];
+                        font = GetFont(run.Style);
                         color = _textColor;
                     }
 
@@ -358,13 +380,12 @@ namespace ExcelDna.IntelliSense
                     {
                         if (text == "") continue;
 
-                        var location = new Point(layoutLeft + lineWidth, layoutTop + currentHeight);
                         var proposedSize = new Size(maxWidth - lineWidth, maxHeight - currentHeight);
                         var textSize = TextRenderer.MeasureText(e.Graphics, text, font, proposedSize, textFormatFlags);
                         if (textSize.Width <= proposedSize.Width)
                         {
                             // Draw it in this line
-                            TextRenderer.DrawText(e.Graphics, text, font, location, color, textFormatFlags);
+                            TextRenderer.DrawText(e.Graphics, text, font, new Point(layoutLeft + lineWidth, layoutTop + currentHeight), color, textFormatFlags);
                         }
                         else
                         {
@@ -377,32 +398,8 @@ namespace ExcelDna.IntelliSense
 
                                 lineHeight = minLineHeight;
                                 lineWidth = 2;  // Start with a little bit of indent on these lines
-
-                                // TODO: Clean up this duplication
-                                location = new Point(layoutLeft + lineWidth, layoutTop + currentHeight);
-                                proposedSize = new Size(maxWidth - lineWidth, maxHeight - currentHeight);
-                                textSize = TextRenderer.MeasureText(e.Graphics, text, font, proposedSize, textFormatFlags);
-                                if (textSize.Width <= proposedSize.Width)
-                                {
-                                    // Draw it in this line (the new one)
-                                    TextRenderer.DrawText(e.Graphics, text, font, location, color, textFormatFlags);
-                                }
-                                else
-                                {
-                                    // Even too long for a full line - draw truncated
-                                    textSize = new Size(proposedSize.Width, textSize.Height);
-                                    var bounds = new Rectangle(location, textSize);
-                                    TextRenderer.DrawText(e.Graphics, text, font, bounds, color, textFormatFlags | TextFormatFlags.EndEllipsis);
-                                }
                             }
-                            else
-                            {
-                                // Draw truncated
-                                textSize = new Size(proposedSize.Width, textSize.Height);
-                                var bounds = new Rectangle(location, textSize);
-                                //  new Rectangle(layoutLeft + lineWidth, layoutTop + currentHeight, maxWidth, maxHeight - currentHeight)
-                                TextRenderer.DrawText(e.Graphics, text, font, bounds, color, textFormatFlags | TextFormatFlags.EndEllipsis);
-                            }
+                            TextRenderer.DrawText(e.Graphics, text, font, new Rectangle(layoutLeft + lineWidth, layoutTop + currentHeight, maxWidth, maxHeight - currentHeight), color, textFormatFlags | TextFormatFlags.EndEllipsis);
                         }
 
                         if (run.IsLink)
@@ -458,6 +455,7 @@ namespace ExcelDna.IntelliSense
         {
             var workingArea = Screen.GetWorkingArea(new Point(_currentLeft, _currentTop + _topOffset));
             bool tipFits = workingArea.Contains(new Rectangle(_currentLeft, _currentTop + _topOffset, width, height));
+            
             if (!tipFits && (_currentLeft == _showLeft && _currentTop == _showTop))
             {
                 // It doesn't fit and it's still where we initially tried to show it 
@@ -478,6 +476,15 @@ namespace ExcelDna.IntelliSense
                     }
                 }
             }
+
+            // Mimic Excel behaviour: it never goes beyond the screen's leftmost
+            // boundary and does not truncate at the bottom - it always stays on
+            // the screen in full.
+            // -
+            _currentLeft = Math.Max(_currentLeft, 0);
+            _showLeft = Math.Max(_showLeft, 0);
+            _currentTop = Math.Min(_currentTop, workingArea.Bottom - _topOffset - height);
+
             SetBounds(_currentLeft, _currentTop + _topOffset, width, height);
         }
         #endregion
@@ -523,7 +530,7 @@ namespace ExcelDna.IntelliSense
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Name = "ToolTipForm";
             this.ShowInTaskbar = false;
-            this.tipDna.SetToolTip(this, "IntelliSense by Excel-DNA");
+            this.tipDna.SetToolTip(this, Resources.ClickFunctionNameInTooltipWindowToAccessHelp);
             this.ResumeLayout(false);
 
         }

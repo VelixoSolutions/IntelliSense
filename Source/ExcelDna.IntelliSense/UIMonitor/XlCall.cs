@@ -1,5 +1,6 @@
-﻿using System;
-using System.Diagnostics;
+﻿#nullable enable
+
+using System;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 
@@ -44,7 +45,7 @@ namespace ExcelDna.IntelliSense
         // NOTE: I've only seen this crash during shutdown
         //       We enable handling of the AccessViolation as best we can
         [HandleProcessCorruptedStateExceptions]
-        public static string GetFormulaEditPrefix()
+        public static string? GetFormulaEditPrefix()
         {
             if (_shutdownStarted)
                 return null;
@@ -53,15 +54,19 @@ namespace ExcelDna.IntelliSense
             {
                 var fmlaInfo = new FmlaInfo();
                 var result = LPenHelper(xlGetFmlaInfo, ref fmlaInfo);
+                
                 if (result != 0)
                 {
                     Logger.WindowWatcher.Warn($"LPenHelper Failed. Result: {result}");
+                    
                     // This exception is poorly handled when it happens in the SyncMacro
                     // We only expect the error to happen during shutdown, in which case we might as well
-                    // handle this asif no formula is being edited
+                    // handle this as if no formula is being edited
                     // throw new InvalidOperationException("LPenHelper Failed. Result: " + result);
+                    // -
                     return null;
                 }
+
                 if (fmlaInfo.wPointMode == xlModeReady)
                 {
                     Logger.WindowWatcher.Verbose($"LPenHelper PointMode Ready");
@@ -70,15 +75,23 @@ namespace ExcelDna.IntelliSense
 
                 // We seem to mis-track in the click case when wPointMode changed from xlModeEnter to xlModeEdit
 
+                string fullFormula = Marshal.PtrToStringUni(fmlaInfo.lpch, fmlaInfo.cch);
+
+                IntelliSenseEvents.Instance.OnEditingFormula(fullFormula);
+
                 Logger.WindowWatcher.Verbose("LPenHelper Status: PointMode: {0}, Formula: {1}, First: {2}, Last: {3}, Caret: {4}",
-                    fmlaInfo.wPointMode, Marshal.PtrToStringUni(fmlaInfo.lpch, fmlaInfo.cch), fmlaInfo.ichFirst, fmlaInfo.ichLast, fmlaInfo.ichCaret);
+                    fmlaInfo.wPointMode, fullFormula, fmlaInfo.ichFirst, fmlaInfo.ichLast, fmlaInfo.ichCaret);
 
                 var prefixLen = Math.Min(Math.Max(fmlaInfo.ichCaret, fmlaInfo.ichLast), fmlaInfo.cch);  // I've never seen ichLast > cch !?
-                return Marshal.PtrToStringUni(fmlaInfo.lpch, prefixLen);
+
+                string formulaPrefix = Marshal.PtrToStringUni(fmlaInfo.lpch, prefixLen);
+                
+                return formulaPrefix;
             }
             catch (AccessViolationException)
             {
                 Logger.WindowWatcher.Warn("LPenHelper - Access Violation!");
+
                 return null;
             }
             catch (Exception ex)

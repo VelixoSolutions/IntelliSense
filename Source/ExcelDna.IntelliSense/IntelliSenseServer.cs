@@ -111,8 +111,6 @@ namespace ExcelDna.IntelliSense
         public static void Uninstall()
         {
             Logger.Initialization.Info($"IntelliSenseServer.Uninstall Begin: Version {ServerVersion} in {AppDomain.CurrentDomain.FriendlyName}");
-            if (IsDisabled())
-                return;
 
             UnpublishRegistration();
             if (_isActive)
