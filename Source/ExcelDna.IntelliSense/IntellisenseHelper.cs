@@ -31,7 +31,6 @@ namespace ExcelDna.IntelliSense
             _providers = new List<IIntelliSenseProvider>
             {
                 new ExcelDnaIntelliSenseProvider(_syncContextMain),
-                new WorkbookIntelliSenseProvider(),
             };
 
             RegisterIntellisense();

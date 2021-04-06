@@ -80,8 +80,6 @@
     <Compile Include="FormattedText.cs" />
     <Compile Include="Properties\Resources.Designer.cs" />
     <Compile Include="Providers\ExcelDnaIntelliSenseProvider.cs" />
-    <Compile Include="Providers\WorkbookIntelliSenseProvider.cs" />
-    <Compile Include="Providers\XmlIntelliSenseProvider.cs" />
     <Compile Include="UIMonitor\ExcelToolTipWatcher.cs" />
     <Compile Include="UIMonitor\FormulaEditWatcher.cs" />
     <Compile Include="UIMonitor\FormulaParser.cs" />

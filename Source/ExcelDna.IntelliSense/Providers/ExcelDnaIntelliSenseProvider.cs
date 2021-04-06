@@ -103,7 +103,6 @@ namespace ExcelDna.IntelliSense
 
         readonly SynchronizationContext _syncContextMain; // Main thread, not macro context
         readonly ExcelSynchronizationContext _syncContextExcel; // Proper macro context
-        readonly XmlIntelliSenseProvider _xmlProvider;
         readonly Dictionary<string, XllRegistrationInfo> _xllRegistrationInfos = new Dictionary<string, XllRegistrationInfo>();
         LoaderNotification _loaderNotification;
         bool _isDirty;
@@ -116,8 +115,6 @@ namespace ExcelDna.IntelliSense
             _loaderNotification.LoadNotification += loaderNotification_LoadNotification;
             _syncContextMain = syncContextMain;
             _syncContextExcel = new ExcelSynchronizationContext();
-            _xmlProvider = new XmlIntelliSenseProvider();
-            _xmlProvider.Invalidate += (sender, e) => OnInvalidate(null);
             _processLoadNotification = ProcessLoadNotification;
         }
 
@@ -128,8 +125,6 @@ namespace ExcelDna.IntelliSense
         {
             Debug.Assert(Thread.CurrentThread.ManagedThreadId == 1);
             Logger.Provider.Info("ExcelDnaIntelliSenseProvider.Initialize");
-
-            _xmlProvider.Initialize();
 
             lock (_xllRegistrationInfos)
             {
@@ -142,8 +137,6 @@ namespace ExcelDna.IntelliSense
                         XllRegistrationInfo regInfo = new XllRegistrationInfo(xllPath);
                         _xllRegistrationInfos[xllPath] = regInfo;
 
-                        _xmlProvider.RegisterXmlFunctionInfo(GetXmlPath(xllPath));
-                        
                         regInfo.Refresh();
                     }
                 }
@@ -163,7 +156,6 @@ namespace ExcelDna.IntelliSense
                 {
                     regInfo.Refresh();
                 }
-                _xmlProvider.Refresh();
                 _isDirty = false;
             }
             Logger.Provider.Info("ExcelDnaIntelliSenseProvider.Refresh - after lock");
@@ -185,11 +177,9 @@ namespace ExcelDna.IntelliSense
                 Logger.Provider.Verbose($"\t{info.Name}({info.ArgumentList.Count}) - {info.Description} ");
             }
 
-            var xmlInfos = _xmlProvider.GetFunctionInfos();
-            var allInfos = excelDnaInfos.Concat(xmlInfos).ToList();
-
             Logger.Provider.Verbose("ExcelDnaIntelliSenseProvider.GetFunctionInfos End");
-            return allInfos;
+
+            return excelDnaInfos;
         }
 
         #endregion
@@ -225,8 +215,6 @@ namespace ExcelDna.IntelliSense
                         _xllRegistrationInfos[xllPath] = regInfo;
                         //regInfo.Refresh();    // Rather not.... so that we don't even try during the AddIns enumeration... OnInvalidate will lead to Refresh()
 
-                        _xmlProvider.RegisterXmlFunctionInfo(GetXmlPath(xllPath));
-
                         if (!_isDirty)
                         {
                             _isDirty = true;
@@ -240,7 +228,6 @@ namespace ExcelDna.IntelliSense
                 else if (notification.Reason == LoaderNotification.Reason.Unloaded)
                 {
                     _xllRegistrationInfos.Remove(xllPath);
-                    _xmlProvider.UnregisterXmlFunctionInfo(GetXmlPath(xllPath));
 
                     // Not too eager when cleaning up
                     // OnInvalidate();
