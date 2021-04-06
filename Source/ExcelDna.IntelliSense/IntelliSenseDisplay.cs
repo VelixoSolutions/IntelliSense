@@ -543,7 +543,7 @@ namespace ExcelDna.IntelliSense
                 var currentArgument = argumentList[currentArgIndex];
                 IntelliSenseEvents.Instance.OnEditingArgument(currentArgument.Name, currentArgIndex);
 
-                var description = GetArgumentDescriptionOrNull(currentArgument);
+                var description = GetArgumentDescription(currentArgument);
 
                 if (description != null)
                 {
