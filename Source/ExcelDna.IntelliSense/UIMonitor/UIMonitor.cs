@@ -49,7 +49,14 @@ namespace ExcelDna.IntelliSense
                     return;
                 }
 
-                StateUpdate?.Invoke(this, new UIStateUpdate(CurrentState, CurrentState, UIStateUpdate.UpdateType.FormulaEditTextChange));
+                try
+                {
+                    StateUpdate?.Invoke(this, new UIStateUpdate(CurrentState, CurrentState, UIStateUpdate.UpdateType.FormulaEditTextChange));
+                }
+                catch (Exception ex)
+                {
+                    Logger.Display.Error(ex.ToString());
+                }
             }, null);
         }
 
