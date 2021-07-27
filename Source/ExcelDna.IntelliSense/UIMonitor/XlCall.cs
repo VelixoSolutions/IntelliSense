@@ -77,15 +77,15 @@ namespace ExcelDna.IntelliSense
 
                 string fullFormula = Marshal.PtrToStringUni(fmlaInfo.lpch, fmlaInfo.cch);
 
-                IntelliSenseEvents.Instance.OnEditingFormula(fullFormula);
-
                 Logger.WindowWatcher.Verbose("LPenHelper Status: PointMode: {0}, Formula: {1}, First: {2}, Last: {3}, Caret: {4}",
                     fmlaInfo.wPointMode, fullFormula, fmlaInfo.ichFirst, fmlaInfo.ichLast, fmlaInfo.ichCaret);
 
                 var prefixLen = Math.Min(Math.Max(fmlaInfo.ichCaret, fmlaInfo.ichLast), fmlaInfo.cch);  // I've never seen ichLast > cch !?
 
                 string formulaPrefix = Marshal.PtrToStringUni(fmlaInfo.lpch, prefixLen);
-                
+
+                IntelliSenseEvents.Instance.OnEditingFormula(fullFormula, formulaPrefix);
+
                 return formulaPrefix;
             }
             catch (AccessViolationException)

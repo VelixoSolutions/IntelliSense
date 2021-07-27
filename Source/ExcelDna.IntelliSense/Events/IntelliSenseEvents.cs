@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
@@ -12,7 +11,7 @@ namespace ExcelDna.IntelliSense
     {
         public static IntelliSenseEvents Instance = new IntelliSenseEvents();
 
-        private BehaviorSubject<string?> _editedFormula = new BehaviorSubject<string?>(null);
+        private BehaviorSubject<(string fullFormula, string formulaPrefix)?> _editedFormula = new BehaviorSubject<(string fullFormula, string formulaPrefix)?>(null);
 
         private BehaviorSubject<string?> _functionName = new BehaviorSubject<string?>(null);
 
@@ -20,7 +19,7 @@ namespace ExcelDna.IntelliSense
 
         public IObservable<string?> FunctionName => _functionName.DistinctUntilChanged().Publish().RefCount();
 
-        public IObservable<string?> EditedFormula => _editedFormula.DistinctUntilChanged().Publish().RefCount();
+        public IObservable<(string fullFormula, string formulaPrefix)?> EditedFormula => _editedFormula.DistinctUntilChanged().Publish().RefCount();
 
         public IObservable<(string name, int index)?> EditedArgument => _editedArgument.DistinctUntilChanged().Publish().RefCount();
 
@@ -32,7 +31,10 @@ namespace ExcelDna.IntelliSense
 
         internal void OnEditingFunction(string? functionName) => _functionName.OnNext(functionName);
 
-        internal void OnEditingFormula(string? fullFormula) => _editedFormula.OnNext(fullFormula);
+        internal void OnEditingFormula(string? fullFormula, string? formulaPrefix) => _editedFormula.OnNext(
+            fullFormula != null && formulaPrefix != null
+                ? (fullFormula, formulaPrefix)
+                : null as (string, string)?);
 
         internal void OnEditingArgument(string? argumentName, int? argumentIndex) 
             => _editedArgument.OnNext(

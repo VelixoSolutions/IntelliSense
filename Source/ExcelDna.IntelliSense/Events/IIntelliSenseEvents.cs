@@ -10,7 +10,7 @@ namespace ExcelDna.IntelliSense
 
         public IObservable<string?> FunctionName { get; }
 
-        public IObservable<string?> EditedFormula { get; }
+        public IObservable<(string fullFormula, string formulaPrefix)?> EditedFormula { get; }
 
         public IObservable<(string name, int index)?> EditedArgument { get; }
 
