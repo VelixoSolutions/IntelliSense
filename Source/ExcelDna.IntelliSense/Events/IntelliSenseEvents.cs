@@ -12,16 +12,21 @@ namespace ExcelDna.IntelliSense
         public static IntelliSenseEvents Instance = new IntelliSenseEvents();
 
         private BehaviorSubject<(string fullFormula, string formulaPrefix)?> _editedFormula = new BehaviorSubject<(string fullFormula, string formulaPrefix)?>(null);
-
         private BehaviorSubject<string?> _functionName = new BehaviorSubject<string?>(null);
-
         private BehaviorSubject<(string name, int index)?> _editedArgument = new BehaviorSubject<(string name, int index)?>(null);
 
-        public IObservable<string?> FunctionName => _functionName.DistinctUntilChanged().Publish().RefCount();
+        public IntelliSenseEvents()
+        {
+            FunctionName = _functionName.DistinctUntilChanged().Publish().RefCount();
+            EditedFormula = _editedFormula.DistinctUntilChanged().Publish().RefCount();
+            EditedArgument = _editedArgument.DistinctUntilChanged().Publish().RefCount();
+        }
 
-        public IObservable<(string fullFormula, string formulaPrefix)?> EditedFormula => _editedFormula.DistinctUntilChanged().Publish().RefCount();
+        public IObservable<string?> FunctionName { get; }
 
-        public IObservable<(string name, int index)?> EditedArgument => _editedArgument.DistinctUntilChanged().Publish().RefCount();
+        public IObservable<(string fullFormula, string formulaPrefix)?> EditedFormula { get; }
+
+        public IObservable<(string name, int index)?> EditedArgument { get; }
 
         public event EventHandler<CollectingArgumentDescriptionEventArgs>? OnCollectingAdditionalArgumentDescription;
 
