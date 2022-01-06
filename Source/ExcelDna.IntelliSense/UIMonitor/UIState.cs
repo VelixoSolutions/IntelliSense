@@ -219,13 +219,12 @@ namespace ExcelDna.IntelliSense
                 {
                     yield break;
                 }
-                else if (newState is FunctionList)
+                else if (newState is FunctionList functionList)
                 {
                     // We generate an intermediate state (!?)
-                    var functionList = (FunctionList)newState;
                     var formulaEdit = functionList.AsFormulaEdit();
                     yield return new UIStateUpdate(oldState, formulaEdit, UIStateUpdate.UpdateType.FormulaEditStart);
-                    yield return new UIStateUpdate(formulaEdit, newState, UIStateUpdate.UpdateType.FunctionListShow);
+                    yield return new UIStateUpdate(formulaEdit, functionList, UIStateUpdate.UpdateType.FunctionListShow);
                 }
                 else if (newState is FormulaEdit) // But not FunctionList
                 {
@@ -239,87 +238,80 @@ namespace ExcelDna.IntelliSense
                     yield return new UIStateUpdate(ReadyState, newState, UIStateUpdate.UpdateType.SelectDataSourceShow);
                 }
             }
-            else if (oldState is FunctionList)  // and thus also FormulaEdit
+            else if (oldState is FunctionList oldStateFl)  // and thus also FormulaEdit
             {
                 if (newState is Ready)
                 {
                     // We generate an intermediate state (!?)
-                    var formulaEdit = ((FunctionList)oldState).AsFormulaEdit();
-                    yield return new UIStateUpdate(oldState, formulaEdit, UIStateUpdate.UpdateType.FunctionListHide);
+                    var formulaEdit = oldStateFl.AsFormulaEdit();
+                    yield return new UIStateUpdate(oldStateFl, formulaEdit, UIStateUpdate.UpdateType.FunctionListHide);
                     yield return new UIStateUpdate(formulaEdit, newState, UIStateUpdate.UpdateType.FormulaEditEnd);
                 }
-                else if (newState is FunctionList)
+                else if (newState is FunctionList newStateFl)
                 {
-                    var oldStateFL = (FunctionList)oldState;
-                    var newStateFL = (FunctionList)newState;
-                    foreach (var update in GetUpdates(oldStateFL, newStateFL))
+                    foreach (var update in GetUpdates(oldStateFl, newStateFl))
                         yield return update;
                 }
-                else if (newState is FormulaEdit) // but not FunctionList
+                else if (newState is FormulaEdit newStateFe) // but not FunctionList
                 {
-                    var oldStateFE = ((FunctionList)oldState).AsFormulaEdit();
-                    yield return new UIStateUpdate(oldState, oldStateFE, UIStateUpdate.UpdateType.FunctionListHide);
+                    var oldStateFE = oldStateFl.AsFormulaEdit();
+                    yield return new UIStateUpdate(oldStateFl, oldStateFE, UIStateUpdate.UpdateType.FunctionListHide);
 
-                    var newStateFE = (FormulaEdit)newState;
-                    foreach (var update in GetUpdates(oldStateFE, newStateFE))
+                    foreach (var update in GetUpdates(oldStateFE, newStateFe))
                         yield return update;
                 }
                 else if (newState is SelectDataSource)
                 {
                     // Go to Ready then to new state
-                    foreach (var update in GetUpdates(oldState, ReadyState))
+                    foreach (var update in GetUpdates(oldStateFl, ReadyState))
                         yield return update;
                     yield return new UIStateUpdate(ReadyState, newState, UIStateUpdate.UpdateType.SelectDataSourceShow);
                 }
             }
-            else if (oldState is FormulaEdit)   // but not FunctionList
+            else if (oldState is FormulaEdit oldStateFe)   // but not FunctionList
             {
                 if (newState is Ready)
                 {
-                    yield return new UIStateUpdate(oldState, newState, UIStateUpdate.UpdateType.FormulaEditEnd);
+                    yield return new UIStateUpdate(oldStateFe, newState, UIStateUpdate.UpdateType.FormulaEditEnd);
                 }
-                else if (newState is FunctionList)
+                else if (newState is FunctionList list)
                 {
                     // First process any FormulaEdit changes
-                    var oldStateFE = (FormulaEdit)oldState;
-                    var newStateFE = ((FunctionList)newState).AsFormulaEdit();
-                    foreach (var update in GetUpdates(oldStateFE, newStateFE))
+                    var newStateFE = list.AsFormulaEdit();
+                    foreach (var update in GetUpdates(oldStateFe, newStateFE))
                         yield return update;
 
-                    yield return new UIStateUpdate(newStateFE, newState, UIStateUpdate.UpdateType.FunctionListShow);
+                    yield return new UIStateUpdate(newStateFE, list, UIStateUpdate.UpdateType.FunctionListShow);
                 }
-                else if (newState is FormulaEdit) // but not FunctionList
+                else if (newState is FormulaEdit newStateFe) // but not FunctionList
                 {
-                    var oldStateFE = (FormulaEdit)oldState;
-                    var newStateFE = (FormulaEdit)newState;
-                    foreach (var update in GetUpdates(oldStateFE, newStateFE))
+                    var oldStateFE = oldStateFe;
+                    foreach (var update in GetUpdates(oldStateFE, newStateFe))
                         yield return update;
                 }
                 else if (newState is SelectDataSource)
                 {
                     // Go to Ready then to new state
-                    foreach (var update in GetUpdates(oldState, ReadyState))
+                    foreach (var update in GetUpdates(oldStateFe, ReadyState))
                         yield return update;
                     yield return new UIStateUpdate(ReadyState, newState, UIStateUpdate.UpdateType.SelectDataSourceShow);
                 }
             }
-            else if (oldState is SelectDataSource)
+            else if (oldState is SelectDataSource oldStateSds)
             {
                 if (newState is Ready)
                 {
-                    yield return new UIStateUpdate(oldState, newState, UIStateUpdate.UpdateType.SelectDataSourceHide);
+                    yield return new UIStateUpdate(oldStateSds, newState, UIStateUpdate.UpdateType.SelectDataSourceHide);
                 }
-                else if (newState is SelectDataSource)
+                else if (newState is SelectDataSource newStateSds)
                 {
-                    var oldStateSDS = (SelectDataSource)oldState;
-                    var newStateSDS = (SelectDataSource)newState;
-                    if (oldStateSDS.SelectDataSourceWindow != newStateSDS.SelectDataSourceWindow)
-                        yield return new UIStateUpdate(oldState, newState, UIStateUpdate.UpdateType.SelectDataSourceWindowChange);
+                    if (oldStateSds.SelectDataSourceWindow != newStateSds.SelectDataSourceWindow)
+                        yield return new UIStateUpdate(oldStateSds, newStateSds, UIStateUpdate.UpdateType.SelectDataSourceWindowChange);
                 }
                 else
                 {
                     // Go to Ready, then to new state
-                    yield return new UIStateUpdate(oldState, ReadyState, UIStateUpdate.UpdateType.SelectDataSourceHide);
+                    yield return new UIStateUpdate(oldStateSds, ReadyState, UIStateUpdate.UpdateType.SelectDataSourceHide);
                     foreach (var update in GetUpdates(ReadyState, newState))
                         yield return update;
                 }
