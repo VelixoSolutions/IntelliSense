@@ -250,7 +250,7 @@ namespace ExcelDna.IntelliSense
         {
             var machineDisabled = Registry.GetValue(DisabledVersionsMachineKeyName, DisabledVersionsValueName, null) as string;
             var userDisabled = Registry.GetValue(DisabledVersionsUserKeyName, DisabledVersionsValueName, null) as string;
-            var environmentDisabled = Environment.GetEnvironmentVariable(DisabledVersionsVariable) as string;
+            var environmentDisabled = Environment.GetEnvironmentVariable(DisabledVersionsVariable);
 
             var thisVersion = ServerVersion;
             var isDisabled = IsVersionMatch(thisVersion, machineDisabled) ||

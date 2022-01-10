@@ -162,8 +162,7 @@ namespace ExcelDna.IntelliSense
                 if (_lastExcelToolTipShown == e.Handle)
                     _lastExcelToolTipShown = _excelToolTipWatcher.GetLastToolTipOrZero();
 
-                var fe = CurrentState as UIState.FormulaEdit;
-                if (fe != null)
+                if (CurrentState is UIState.FormulaEdit fe)
                 {
                     // Either a FormulaEdit or a FunctionList
                     if (fe.ExcelToolTipWindow == e.Handle)
