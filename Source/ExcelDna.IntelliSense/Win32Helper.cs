@@ -1,16 +1,15 @@
-﻿using System;
-using System.ComponentModel;
+﻿using ExcelDna.Integration;
+using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Text;
-using ExcelDna.Integration;
 
 namespace ExcelDna.IntelliSense
 {
-    static class Win32Helper
+    internal static class Win32Helper
     {
-        enum WM : uint
+        private enum WM : uint
         {
             GETTEXT = 0x000D,
             GETTEXTLENGTH = 0x000E,
@@ -28,15 +27,15 @@ namespace ExcelDna.IntelliSense
         [DllImport("kernel32.dll")]
         public static extern IntPtr GetModuleHandle(string lpModuleName);
         [DllImport("kernel32.dll")]
-        static extern uint GetCurrentProcessId();
+        private static extern uint GetCurrentProcessId();
         [DllImport("user32.dll", SetLastError = true)]
-        static extern int GetClassNameW(IntPtr hwnd, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buf, int nMaxCount);
+        private static extern int GetClassNameW(IntPtr hwnd, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder buf, int nMaxCount);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        static extern int GetWindowTextLength(IntPtr hWnd);
+        private static extern int GetWindowTextLength(IntPtr hWnd);
 
         [DllImport("gdi32.dll")]
         internal static extern IntPtr CreateRoundRectRgn(
@@ -58,28 +57,28 @@ namespace ExcelDna.IntelliSense
         internal static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        static extern IntPtr SendMessage(IntPtr hWnd, WM Msg, IntPtr wParam, [Out] StringBuilder lParam);
+        private static extern IntPtr SendMessage(IntPtr hWnd, WM Msg, IntPtr wParam, [Out] StringBuilder lParam);
 
         [DllImport("user32.dll")]
-        static extern IntPtr SendMessage(IntPtr hWnd, WM Msg, IntPtr wParam, IntPtr lParam);
+        private static extern IntPtr SendMessage(IntPtr hWnd, WM Msg, IntPtr wParam, IntPtr lParam);
 
         [DllImport("user32.dll")]
-        static extern IntPtr SendMessage(IntPtr hWnd, WM Msg, IntPtr wParam, ref LV_ITEM lParam);
+        private static extern IntPtr SendMessage(IntPtr hWnd, WM Msg, IntPtr wParam, ref LV_ITEM lParam);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        static extern IntPtr SendMessage(IntPtr hWnd, WM Msg, IntPtr wParam, ref RECT lParam);
+        private static extern IntPtr SendMessage(IntPtr hWnd, WM Msg, IntPtr wParam, ref RECT lParam);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool GetCursorPos(out Point lpPoint);
+        private static extern bool GetCursorPos(out Point lpPoint);
 
         [DllImport("user32.dll")]
-        static extern bool ScreenToClient(IntPtr hWnd, ref Point lpPoint);
+        private static extern bool ScreenToClient(IntPtr hWnd, ref Point lpPoint);
 
         [DllImport("user32.dll", SetLastError = true)]
-        static extern bool GetGUIThreadInfo(uint idThread, ref GUITHREADINFO lpgui);
+        private static extern bool GetGUIThreadInfo(uint idThread, ref GUITHREADINFO lpgui);
 
-        struct GUITHREADINFO
+        private struct GUITHREADINFO
         {
 #pragma warning disable CS0649
             public int cbSize;
@@ -96,7 +95,7 @@ namespace ExcelDna.IntelliSense
 
         // Different to Rectangle ...?
         [StructLayout(LayoutKind.Sequential)]
-        struct RECT
+        private struct RECT
         {
             public int Left;
             public int Top;
@@ -105,9 +104,9 @@ namespace ExcelDna.IntelliSense
         }
 
         [DllImport("user32.dll")]
-        static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+        private static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
 
-        enum GetAncestorFlags
+        private enum GetAncestorFlags
         {
             // Retrieves the parent window. This does not include the owner, as it does with the GetParent function. 
             GetParent = 1,
@@ -118,10 +117,10 @@ namespace ExcelDna.IntelliSense
         }
 
         [DllImport("user32.dll")]
-        static extern IntPtr GetAncestor(IntPtr hwnd, GetAncestorFlags flags);
+        private static extern IntPtr GetAncestor(IntPtr hwnd, GetAncestorFlags flags);
 
         [DllImport("user32.dll", SetLastError = true)]
-        static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
         [DllImport("user32.dll")]
         public static extern IntPtr SetCapture(IntPtr hWnd);
@@ -135,35 +134,38 @@ namespace ExcelDna.IntelliSense
             var info = new GUITHREADINFO();
             info.cbSize = Marshal.SizeOf(info);
             if (!GetGUIThreadInfo(0, ref info))
+            {
                 return IntPtr.Zero;
+            }
 
-            var focusedWindow = info.hwndFocus;
+            IntPtr focusedWindow = info.hwndFocus;
             if (focusedWindow == IntPtr.Zero)
+            {
                 return focusedWindow;
+            }
 
-            uint processId;
-            uint threadId = GetWindowThreadProcessId(focusedWindow, out processId);
+            var threadId = GetWindowThreadProcessId(focusedWindow, out var processId);
             if (threadId == 0)
+            {
                 return IntPtr.Zero;
+            }
 
-            uint currentProcessId = GetCurrentProcessId();
+            var currentProcessId = GetCurrentProcessId();
             if (processId == currentProcessId)
+            {
                 return focusedWindow;
+            }
 
             return IntPtr.Zero;
         }
 
         // Should return null if there is no such ancestor
-        public static IntPtr GetRootAncestor(IntPtr hWnd)
-        {
-            return GetAncestor(hWnd, GetAncestorFlags.GetRoot);
-        }
+        public static IntPtr GetRootAncestor(IntPtr hWnd) => GetAncestor(hWnd, GetAncestorFlags.GetRoot);
 
         public static System.Drawing.Point GetClientCursorPos(IntPtr hWnd)
         {
-            Point pt;
-            bool ok = GetCursorPos(out pt);
-            bool ok2 = ScreenToClient(hWnd, ref pt);
+            var ok = GetCursorPos(out Point pt);
+            var ok2 = ScreenToClient(hWnd, ref pt);
             return pt;
         }
 
@@ -172,8 +174,8 @@ namespace ExcelDna.IntelliSense
         // Returns the window bounds in 
         public static System.Windows.Rect GetWindowBounds(IntPtr hWnd)
         {
-            RECT rect; // This struct layout is like Win32 RECT (not like System.Drawing.Rectangle)
-            if (GetWindowRect(hWnd, out rect))
+            // This struct layout is like Win32 RECT (not like System.Drawing.Rectangle)
+            if (GetWindowRect(hWnd, out RECT rect))
             {
                 return new System.Windows.Rect(rect.Left, rect.Top, rect.Right - rect.Left + 1, rect.Bottom - rect.Top + 1);
             }
@@ -186,16 +188,16 @@ namespace ExcelDna.IntelliSense
         public static string GetWindowTextRaw(IntPtr hwnd)
         {
             // Allocate correct string length first
-            int length = (int)SendMessage(hwnd, WM.GETTEXTLENGTH, IntPtr.Zero, null);
-            StringBuilder sb = new StringBuilder(length + 1);
+            var length = (int)SendMessage(hwnd, WM.GETTEXTLENGTH, IntPtr.Zero, null);
+            var sb = new StringBuilder(length + 1);
             SendMessage(hwnd, WM.GETTEXT, (IntPtr)sb.Capacity, sb);
             return sb.ToString();
         }
 
-        const int SW_HIDE = 0;
+        private const int SW_HIDE = 0;
 
         [DllImport("user32.dll")]
-        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
         public static bool HideWindow(IntPtr hWnd)
         {
@@ -211,30 +213,21 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        public static string GetXllName()
-        {
-            return ExcelDnaUtil.XllPath;
-        }
+        public static string GetXllName() => ExcelDnaUtil.XllPath;
 
-        public static IntPtr GetXllModuleHandle()
-        {
-            return GetModuleHandle(GetXllName());
-        }
+        public static IntPtr GetXllModuleHandle() => GetModuleHandle(GetXllName());
 
-        public static uint GetExcelProcessId()
-        {
-            return GetCurrentProcessId();
-        }
+        public static uint GetExcelProcessId() => GetCurrentProcessId();
 
-        static StringBuilder _buffer = new StringBuilder(65000);
+        private static readonly StringBuilder _buffer = new StringBuilder(65000);
         public static string GetClassName(IntPtr hWnd)
         {
             _buffer.Length = 0;
-            int result = GetClassNameW(hWnd, _buffer, _buffer.Capacity);
+            var result = GetClassNameW(hWnd, _buffer, _buffer.Capacity);
             if (result == 0)
             {
                 // It failed!?
-                int error = Marshal.GetLastWin32Error();
+                var error = Marshal.GetLastWin32Error();
                 Debug.Print($"GetClassName failed on {hWnd}(0x{hWnd:x}) - Error {error}");
                 return "";
             }
@@ -244,26 +237,20 @@ namespace ExcelDna.IntelliSense
         public static string GetText(IntPtr hWnd)
         {
             // Allocate correct string length first
-            int length = GetWindowTextLength(hWnd);
+            var length = GetWindowTextLength(hWnd);
             var sb = new StringBuilder(length + 1);
             GetWindowText(hWnd, sb, sb.Capacity);
             return sb.ToString();
         }
 
-        public static int GetPosFromChar(IntPtr hWnd, int ch)
-        {
-            return (int)SendMessage(hWnd, WM.EM_POSFROMCHAR, new IntPtr(ch), IntPtr.Zero);
-        }
+        public static int GetPosFromChar(IntPtr hWnd, int ch) => (int)SendMessage(hWnd, WM.EM_POSFROMCHAR, new IntPtr(ch), IntPtr.Zero);
 
-        internal static int GetListViewSelectedItemIndex(IntPtr hwndPopupList)
-        {
-            return 1;
-        }
+        internal static int GetListViewSelectedItemIndex(IntPtr hwndPopupList) => 1;
 
-        const int LVIR_BOUNDS = 0;
+        private const int LVIR_BOUNDS = 0;
 
         [StructLayoutAttribute(LayoutKind.Sequential)]
-        struct LV_ITEM
+        private struct LV_ITEM
         {
             public uint mask;
             public int iItem;
@@ -279,7 +266,7 @@ namespace ExcelDna.IntelliSense
         // Sets text to emptyh string if failed to find an item, or another error
         internal static int GetListViewSelectedItemInfo(IntPtr hwndList, out string text, out System.Windows.Rect bounds)
         {
-            string listViewClassName = GetClassName(hwndList);
+            var listViewClassName = GetClassName(hwndList);
             //Debug.Assert(listViewClassName != "SysListView32");
 
             var selectedItemIndex = (int)SendMessage(hwndList, WM.LVM_GETNEXTITEM, new IntPtr(-1), new IntPtr((int)WM.LVNI_SELECTED));
@@ -294,11 +281,13 @@ namespace ExcelDna.IntelliSense
 
             // First get text
 
-            LV_ITEM item = new LV_ITEM();
-            item.mask = /*public const int LVIF_TEXT = */ 0x00000001;
-            item.iSubItem = 0;
+            var item = new LV_ITEM
+            {
+                mask = /*public const int LVIF_TEXT = */ 0x00000001,
+                iSubItem = 0
+            };
             IntPtr nativeBuffer = Marshal.AllocHGlobal(512 * 2);    // There might be a more elegant way to do this, sith a StringBuilder or something...
-            for (int i = 0; i < 512; ++i)
+            for (var i = 0; i < 512; ++i)
             {
                 Marshal.WriteInt16(nativeBuffer, i * 2, '\0');
             }
@@ -308,7 +297,7 @@ namespace ExcelDna.IntelliSense
                 item.pszText = nativeBuffer;
                 item.cchTextMax = 512;
 
-                uint length = (uint)SendMessage(hwndList, WM.LVM_GETITEMTEXTW, new IntPtr(selectedItemIndex), ref item);
+                var length = (uint)SendMessage(hwndList, WM.LVM_GETITEMTEXTW, new IntPtr(selectedItemIndex), ref item);
                 if (length > 0)
                 {
                     text = Marshal.PtrToStringUni(item.pszText, (int)length);
@@ -324,13 +313,19 @@ namespace ExcelDna.IntelliSense
             }
 
             // Now get bounds
-            RECT rect = new RECT();
-            rect.Left = LVIR_BOUNDS;
-            uint ok = (uint)SendMessage(hwndList, WM.LVM_GETITEMRECT, new IntPtr(selectedItemIndex), ref rect);
+            var rect = new RECT
+            {
+                Left = LVIR_BOUNDS
+            };
+            var ok = (uint)SendMessage(hwndList, WM.LVM_GETITEMRECT, new IntPtr(selectedItemIndex), ref rect);
             if (ok != 0)
+            {
                 bounds = new System.Windows.Rect(rect.Left, rect.Top, rect.Right - rect.Left + 1, rect.Bottom - rect.Top + 1);
+            }
             else
+            {
                 bounds = System.Windows.Rect.Empty;
+            }
 
             Debug.Print($"#### >>> {selectedItemIndex} / {ok} / ({rect.Left}, {rect.Top}, {rect.Right}, {rect.Bottom}) / {bounds}");
 
@@ -338,9 +333,9 @@ namespace ExcelDna.IntelliSense
         }
 
         [DllImport("user32.dll", SetLastError = true)]
-        static extern IntPtr GetWindow(IntPtr hWnd, GW uCmd);
+        private static extern IntPtr GetWindow(IntPtr hWnd, GW uCmd);
 
-        enum GW : uint
+        private enum GW : uint
         {
             GW_HWNDFIRST = 0,
             GW_HWNDLAST = 1,
@@ -350,9 +345,6 @@ namespace ExcelDna.IntelliSense
             GW_CHILD = 5,
             GW_ENABLEDPOPUP = 6
         }
-        internal static IntPtr GetFirstChildWindow(IntPtr hwndPopupList)
-        {
-            return GetWindow(hwndPopupList, GW.GW_CHILD);
-        }
+        internal static IntPtr GetFirstChildWindow(IntPtr hwndPopupList) => GetWindow(hwndPopupList, GW.GW_CHILD);
     }
 }

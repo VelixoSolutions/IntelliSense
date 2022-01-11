@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace ExcelDna.IntelliSense
 {
     // Also note LDR_MODULE info here: http://stackoverflow.com/questions/4242469/detect-when-a-module-dll-is-unloaded
-    class LoaderNotification : IDisposable
+    internal class LoaderNotification : IDisposable
     {
         public enum Reason : uint
         {
@@ -23,7 +23,7 @@ namespace ExcelDna.IntelliSense
 
         #region PInvoke details
         // Helper for UNICODE_STRING type - couldn't figure out how to do it simply with Marshaling
-        static class UnicodeString
+        private static class UnicodeString
         {
             // Layout is:
 
@@ -33,7 +33,7 @@ namespace ExcelDna.IntelliSense
 
             public static string ToString(IntPtr pUnicodeString)
             {
-                short length = (short)Marshal.PtrToStructure(pUnicodeString, typeof(short));
+                var length = (short)Marshal.PtrToStructure(pUnicodeString, typeof(short));
                 IntPtr buffer = Marshal.ReadIntPtr(pUnicodeString, IntPtr.Size);  // The offset is determined by the natural size for the struct packing
                 return Marshal.PtrToStringUni(buffer, length / 2);
             }
@@ -43,7 +43,7 @@ namespace ExcelDna.IntelliSense
         // are the same, so we don't have to bother with the union.
         // TODO: Check 64-bit packing
         [StructLayout(LayoutKind.Sequential)]
-        struct Data
+        private struct Data
         {
             public uint Flags;            // Reserved.
             public IntPtr FullDllName;    // PCUNICODE_STRING  // The full path name of the DLL module.
@@ -52,7 +52,7 @@ namespace ExcelDna.IntelliSense
             public uint SizeOfImage;      // The size of the DLL image, in bytes.
         }
 
-        enum NtStatus : uint
+        private enum NtStatus : uint
         {
             // Success
             Success = 0x00000000,
@@ -60,23 +60,23 @@ namespace ExcelDna.IntelliSense
             // Many, many others...
         }
 
-        delegate void LdrNotification(Reason notificationReason, IntPtr pNotificationData, IntPtr context);
+        private delegate void LdrNotification(Reason notificationReason, IntPtr pNotificationData, IntPtr context);
 
         // Registers for notification when a DLL is first loaded. This notification occurs before dynamic linking takes place.
         [DllImport("ntdll.dll")]
-        static extern uint /*NtStatus*/ LdrRegisterDllNotification(
+        private static extern uint /*NtStatus*/ LdrRegisterDllNotification(
             uint flags, // This parameter must be zero.
-            LdrNotification notificationFunction, 
-            IntPtr context, 
-            out IntPtr cookie); 
+            LdrNotification notificationFunction,
+            IntPtr context,
+            out IntPtr cookie);
 
         [DllImport("ntdll.dll")]
-        static extern uint /*NtStatus*/ LdrUnregisterDllNotification(IntPtr cookie);
+        private static extern uint /*NtStatus*/ LdrUnregisterDllNotification(IntPtr cookie);
 
         #endregion
 
-        IntPtr _cookie;
-        LdrNotification _notificationDelegate;
+        private readonly IntPtr _cookie;
+        private readonly LdrNotification _notificationDelegate;
 
         public LoaderNotification()
         {
@@ -92,15 +92,15 @@ namespace ExcelDna.IntelliSense
 
         // WARNING! LoaderLock danger here
         //          LoadNotification event handler must be very careful, not load any other managed library etc...
-        void Notification(Reason notificationReason, IntPtr pNotificationData, IntPtr context)
+        private void Notification(Reason notificationReason, IntPtr pNotificationData, IntPtr context)
         {
-                IntPtr pFullDllName = Marshal.ReadIntPtr(pNotificationData, IntPtr.Size); // The offset is determined by the natural size for the struct packing
-                string fullDllName = UnicodeString.ToString(pFullDllName);
-                NotificationEventArgs args = new NotificationEventArgs { Reason = notificationReason, FullDllName = fullDllName };
-                LoadNotification?.Invoke(this, args);
+            IntPtr pFullDllName = Marshal.ReadIntPtr(pNotificationData, IntPtr.Size); // The offset is determined by the natural size for the struct packing
+            var fullDllName = UnicodeString.ToString(pFullDllName);
+            var args = new NotificationEventArgs { Reason = notificationReason, FullDllName = fullDllName };
+            LoadNotification?.Invoke(this, args);
         }
 
-#region IDisposable Support
+        #region IDisposable Support
         // CONSIDER: We might not need the finalizer support ...
         private bool disposedValue = false; // To detect redundant calls
 
@@ -135,7 +135,7 @@ namespace ExcelDna.IntelliSense
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-#endregion
+        #endregion
 
 
         /*

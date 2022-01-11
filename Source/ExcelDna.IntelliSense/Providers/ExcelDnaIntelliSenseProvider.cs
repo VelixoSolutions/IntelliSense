@@ -1,22 +1,22 @@
-﻿using System;
+﻿using ExcelDna.Integration;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using ExcelDna.Integration;
 
 namespace ExcelDna.IntelliSense
 {
     // Provides IntelliSense info for all Excel-DNA based .xll add-ins, using the built-in RegistrationInfo helper function.
-    class ExcelDnaIntelliSenseProvider : IIntelliSenseProvider
+    internal class ExcelDnaIntelliSenseProvider : IIntelliSenseProvider
     {
-        class XllRegistrationInfo
+        private class XllRegistrationInfo
         {
-            readonly string _xllPath;
-            bool _regInfoNotAvailable = false;  // Set to true if we know for sure that reginfo is #N/A
-            double _version = -1;               // Version indicator to enumerate from scratch
-            object[,] _regInfo = null;          // Default value
+            private readonly string _xllPath;
+            private bool _regInfoNotAvailable = false;  // Set to true if we know for sure that reginfo is #N/A
+            private double _version = -1;               // Version indicator to enumerate from scratch
+            private object[,] _regInfo = null;          // Default value
 
             public XllRegistrationInfo(string xllPath)
             {
@@ -27,9 +27,11 @@ namespace ExcelDna.IntelliSense
             public void Refresh()
             {
                 if (_regInfoNotAvailable)
+                {
                     return;
+                }
 
-                object regInfoResponse = ExcelIntegration.GetRegistrationInfo(_xllPath, _version);
+                var regInfoResponse = ExcelIntegration.GetRegistrationInfo(_xllPath, _version);
 
                 if (regInfoResponse.Equals(ExcelError.ExcelErrorNA))
                 {
@@ -63,28 +65,30 @@ namespace ExcelDna.IntelliSense
                  */
 
                 if (regInfo == null)
+                {
                     yield break;
+                }
 
-                int regInfoCount = regInfo.GetLength(0);
+                var regInfoCount = regInfo.GetLength(0);
                 Logger.Provider.Verbose($"XllRegistrationInfo for {_xllPath}: {regInfoCount} registrations");
-                for (int i = 0; i < regInfoCount; i++)
+                for (var i = 0; i < regInfoCount; i++)
                 {
                     if (regInfo[i, 0] is ExcelEmpty)
                     {
-                        string functionName = regInfo[i, 3] as string;
-                        string helpTopic = regInfo[i, 8] as string;
-                        string description = regInfo[i, 9] as string;
+                        var functionName = regInfo[i, 3] as string;
+                        var helpTopic = regInfo[i, 8] as string;
+                        var description = regInfo[i, 9] as string;
 
-                        string argumentStr = regInfo[i, 4] as string;
-                        string[] argumentNames = string.IsNullOrEmpty(argumentStr) ? Array.Empty<string>() : argumentStr.Split(',');
+                        var argumentStr = regInfo[i, 4] as string;
+                        var argumentNames = string.IsNullOrEmpty(argumentStr) ? Array.Empty<string>() : argumentStr.Split(',');
 
-                        List<FunctionInfo.ArgumentInfo> argumentInfos = new List<FunctionInfo.ArgumentInfo>();
-                        for (int j = 0; j < argumentNames.Length; j++)
+                        var argumentInfos = new List<FunctionInfo.ArgumentInfo>();
+                        for (var j = 0; j < argumentNames.Length; j++)
                         {
-                            argumentInfos.Add(new FunctionInfo.ArgumentInfo 
-                            { 
-                                Name = argumentNames[j], 
-                                Description = regInfo[i, j + 10] as string 
+                            argumentInfos.Add(new FunctionInfo.ArgumentInfo
+                            {
+                                Name = argumentNames[j],
+                                Description = regInfo[i, j + 10] as string
                             });
                         }
 
@@ -101,12 +105,12 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        readonly SynchronizationContext _syncContextMain; // Main thread, not macro context
-        readonly ExcelSynchronizationContext _syncContextExcel; // Proper macro context
-        readonly Dictionary<string, XllRegistrationInfo> _xllRegistrationInfos = new Dictionary<string, XllRegistrationInfo>();
-        LoaderNotification _loaderNotification;
-        bool _isDirty;
-        SendOrPostCallback _processLoadNotification;
+        private readonly SynchronizationContext _syncContextMain; // Main thread, not macro context
+        private readonly ExcelSynchronizationContext _syncContextExcel; // Proper macro context
+        private readonly Dictionary<string, XllRegistrationInfo> _xllRegistrationInfos = new Dictionary<string, XllRegistrationInfo>();
+        private readonly LoaderNotification _loaderNotification;
+        private bool _isDirty;
+        private readonly SendOrPostCallback _processLoadNotification;
         public event EventHandler Invalidate;
 
         public ExcelDnaIntelliSenseProvider(SynchronizationContext syncContextMain)
@@ -134,7 +138,7 @@ namespace ExcelDna.IntelliSense
                     if (!_xllRegistrationInfos.ContainsKey(xllPath))
                     {
                         Logger.Provider.Verbose($"ExcelDnaIntelliSenseProvider.Initialize: Adding XllRegistrationInfo for {xllPath}");
-                        XllRegistrationInfo regInfo = new XllRegistrationInfo(xllPath);
+                        var regInfo = new XllRegistrationInfo(xllPath);
                         _xllRegistrationInfos[xllPath] = regInfo;
 
                         regInfo.Refresh();
@@ -152,7 +156,7 @@ namespace ExcelDna.IntelliSense
             lock (_xllRegistrationInfos)
             {
                 Logger.Provider.Info("ExcelDnaIntelliSenseProvider.Refresh - inside lock");
-                foreach (var regInfo in _xllRegistrationInfos.Values)
+                foreach (XllRegistrationInfo regInfo in _xllRegistrationInfos.Values)
                 {
                     regInfo.Refresh();
                 }
@@ -172,7 +176,7 @@ namespace ExcelDna.IntelliSense
                 excelDnaInfos = _xllRegistrationInfos.Values.SelectMany(ri => ri.GetFunctionInfos()).ToList();
             }
             Logger.Provider.Verbose("ExcelDnaIntelliSenseProvider.GetFunctionInfos - after lock");
-            foreach (var info in excelDnaInfos)
+            foreach (FunctionInfo info in excelDnaInfos)
             {
                 Logger.Provider.Verbose($"\t{info.Name}({info.ArgumentList.Count}) - {info.Description} ");
             }
@@ -186,18 +190,20 @@ namespace ExcelDna.IntelliSense
 
         // DANGER: Still subject to LoaderLock warning ...
         // TODO: Consider Load/Unload done when AddIns is enumerated...
-        void loaderNotification_LoadNotification(object sender, LoaderNotification.NotificationEventArgs e)
+        private void loaderNotification_LoadNotification(object sender, LoaderNotification.NotificationEventArgs e)
         {
             Debug.Print($"@>@>@>@> LoadNotification: {e.Reason} - {e.FullDllName}");
             if (e.FullDllName.EndsWith(".xll", StringComparison.OrdinalIgnoreCase))
+            {
                 _syncContextMain.Post(_processLoadNotification, e);
+            }
         }
 
         // Runs on the main thread, but not in a macro context 
         // WARNING: The sequence of calls here, between queued 
         //          instances of ProcessLoadNotification, Refresh and OnInvalidate
         //          is quite fragile.
-        void ProcessLoadNotification(object state)
+        private void ProcessLoadNotification(object state)
         {
             var notification = (LoaderNotification.NotificationEventArgs)state;
             var xllPath = notification.FullDllName;
@@ -206,8 +212,7 @@ namespace ExcelDna.IntelliSense
             lock (_xllRegistrationInfos)
             {
                 Logger.Provider.Verbose($"ExcelDnaIntelliSenseProvider.ProcessLoadNotification - inside lock");
-                XllRegistrationInfo regInfo;
-                if (!_xllRegistrationInfos.TryGetValue(xllPath, out regInfo))
+                if (!_xllRegistrationInfos.TryGetValue(xllPath, out XllRegistrationInfo regInfo))
                 {
                     if (notification.Reason == LoaderNotification.Reason.Loaded)
                     {
@@ -220,7 +225,7 @@ namespace ExcelDna.IntelliSense
                             _isDirty = true;
                             // This call would case trouble while Excel is shutting down.
                             // CONSIDER: Is there a check we might do.... (and do we in fact get .xll loads during shutdown?)
-                           _syncContextExcel.Post(OnInvalidate, null);
+                            _syncContextExcel.Post(OnInvalidate, null);
                         }
 
                     }
@@ -236,7 +241,7 @@ namespace ExcelDna.IntelliSense
             Logger.Provider.Verbose($"ExcelDnaIntelliSenseProvider.ProcessLoadNotification - after lock");
         }
 
-        string GetXmlPath(string xllPath) => Path.ChangeExtension(xllPath, ".intellisense.xml");
+        private string GetXmlPath(string xllPath) => Path.ChangeExtension(xllPath, ".intellisense.xml");
 
         // Called in macro context
         // Might be implemented by COM AddIns check, or checking loaded Modules with Win32
@@ -244,7 +249,7 @@ namespace ExcelDna.IntelliSense
         // See: http://blogs.office.com/2010/02/16/migrating-excel-4-macros-to-vba/
         // Alternative on old Excel is DOCUMENTS(2) which lists all loaded .xlm (also .xll?)
         // Alternative, more in line with our update watch, is to enumerate all loaded modules...
-        IEnumerable<string> GetLoadedXllPaths()
+        private IEnumerable<string> GetLoadedXllPaths()
         {
             //// DOCUMENT(2) does not seem to include .xll add-ins
 
@@ -275,10 +280,10 @@ namespace ExcelDna.IntelliSense
 
             // Enumerate loaded modules - pick .xll files
             var process = Process.GetCurrentProcess();
-            var modules = process.Modules;
+            ProcessModuleCollection modules = process.Modules;
             foreach (ProcessModule module in modules)
             {
-                var fileName = module.FileName; 
+                var fileName = module.FileName;
                 if (Path.GetExtension(fileName) == ".xll")
                 {
                     yield return fileName;
@@ -287,7 +292,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Must be called on the main thread, in a macro context
-        void OnInvalidate(object _unused_)
+        private void OnInvalidate(object _unused_)
         {
             Debug.Assert(Thread.CurrentThread.ManagedThreadId == 1);
             Invalidate?.Invoke(this, EventArgs.Empty);

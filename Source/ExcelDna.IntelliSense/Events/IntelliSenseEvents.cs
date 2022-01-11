@@ -11,9 +11,9 @@ namespace ExcelDna.IntelliSense
     {
         public static IntelliSenseEvents Instance = new IntelliSenseEvents();
 
-        private BehaviorSubject<(string fullFormula, string formulaPrefix)?> _editedFormula = new BehaviorSubject<(string fullFormula, string formulaPrefix)?>(null);
-        private BehaviorSubject<string?> _functionName = new BehaviorSubject<string?>(null);
-        private BehaviorSubject<(string name, int index)?> _editedArgument = new BehaviorSubject<(string name, int index)?>(null);
+        private readonly BehaviorSubject<(string fullFormula, string formulaPrefix)?> _editedFormula = new BehaviorSubject<(string fullFormula, string formulaPrefix)?>(null);
+        private readonly BehaviorSubject<string?> _functionName = new BehaviorSubject<string?>(null);
+        private readonly BehaviorSubject<(string name, int index)?> _editedArgument = new BehaviorSubject<(string name, int index)?>(null);
 
         public IntelliSenseEvents()
         {
@@ -41,9 +41,9 @@ namespace ExcelDna.IntelliSense
                 ? (fullFormula, formulaPrefix)
                 : null as (string, string)?);
 
-        internal void OnEditingArgument(string? argumentName, int? argumentIndex) 
+        internal void OnEditingArgument(string? argumentName, int? argumentIndex)
             => _editedArgument.OnNext(
-                    argumentName == null || argumentIndex == null 
+                    argumentName == null || argumentIndex == null
                         ? null as (string, int)?
                         : (argumentName, argumentIndex.Value));
 

@@ -1,11 +1,10 @@
-﻿using System;
+﻿using ExcelDna.Integration;
+using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
-using Microsoft.Win32;
-using ExcelDna.Integration;
 using System.Threading;
 
 namespace ExcelDna.IntelliSense
@@ -30,32 +29,30 @@ namespace ExcelDna.IntelliSense
     // REMEMBER: COM events are not necessarily safe macro contexts.
     public static class IntelliSenseServer
     {
-        const string ServerVersion = "1.3.0";  // TODO: Define and manage this somewhere else
+        private const string ServerVersion = "1.3.0";  // TODO: Define and manage this somewhere else
 
         // NOTE: Do not change these constants in custom versions. 
         //       They are part of the co-operative safety mechanism allowing different add-ins providing IntelliSense to work together safely.
-        const string DisabledVersionsMachineKeyName = @"HKEY_LOCAL_MACHINE\Software\ExcelDna\IntelliSense";
-        const string DisabledVersionsUserKeyName = @"HKEY_CURRENT_USER\Software\ExcelDna\IntelliSense";
-        const string DisabledVersionsValueName = "DisabledVersions";
-        const string DisabledVersionsVariable = "EXCELDNA_INTELLISENSE_DISABLEDVERSIONS";
-
-        const string ServersVariable      = "EXCELDNA_INTELLISENSE_SERVERS";
-        const string ActiveServerVariable = "EXCELDNA_INTELLISENSE_ACTIVE_SERVER";
-
-        const string ControlMessageActivate = "ACTIVATE";
-        const string ControlMessageDeactivate = "DEACTIVATE";
-        const string ControlMessageRefresh = "REFRESH";
+        private const string DisabledVersionsMachineKeyName = @"HKEY_LOCAL_MACHINE\Software\ExcelDna\IntelliSense";
+        private const string DisabledVersionsUserKeyName = @"HKEY_CURRENT_USER\Software\ExcelDna\IntelliSense";
+        private const string DisabledVersionsValueName = "DisabledVersions";
+        private const string DisabledVersionsVariable = "EXCELDNA_INTELLISENSE_DISABLEDVERSIONS";
+        private const string ServersVariable = "EXCELDNA_INTELLISENSE_SERVERS";
+        private const string ActiveServerVariable = "EXCELDNA_INTELLISENSE_ACTIVE_SERVER";
+        private const string ControlMessageActivate = "ACTIVATE";
+        private const string ControlMessageDeactivate = "DEACTIVATE";
+        private const string ControlMessageRefresh = "REFRESH";
 
         // Info for registration
         // _serverId is a transient ID to identify this IntelliSense server - we could have used the ExcelDnaUtil.XllGuid one too,
         // but it wasn't public in Excel-DNA v 0.32
         // The advantage of the XllGuid one is that it would be a stable ID across runs.
-        static string _xllPath = ExcelDnaUtil.XllPath;
-        static Guid _serverId = Guid.NewGuid();   
+        private static readonly string _xllPath = ExcelDnaUtil.XllPath;
+        private static Guid _serverId = Guid.NewGuid();
 
         // Activation
-        static bool _isActive = false;
-        static IntelliSenseHelper _helper = null;
+        private static bool _isActive = false;
+        private static IntelliSenseHelper _helper = null;
 
         // The name change from Register to Install is just to force attention on this message for anyone upgrading
         // - omitting the Uninstall call causes an Excel crash when the add-in is unloaded for any reason
@@ -71,13 +68,15 @@ namespace ExcelDna.IntelliSense
 
             Logger.Initialization.Info($"IntelliSenseServer.Install Begin: Version {ServerVersion} in {AppDomain.CurrentDomain.FriendlyName}");
             if (IsDisabled())
+            {
                 return;
+            }
 
             RegisterControlMacro();
             PublishRegistration();
 
-            bool shouldActivate = false;
-            var activeInfo = GetActiveRegistrationInfo();
+            var shouldActivate = false;
+            RegistrationInfo activeInfo = GetActiveRegistrationInfo();
             if (activeInfo == null)
             {
                 shouldActivate = true;
@@ -94,7 +93,7 @@ namespace ExcelDna.IntelliSense
             }
             // Else we're not activating - there is an active server and it is the same version or newer
 
-            if (shouldActivate  &&
+            if (shouldActivate &&
                (activeInfo == null || DeactivateServer(activeInfo)))
             {
                 Activate();
@@ -112,7 +111,9 @@ namespace ExcelDna.IntelliSense
         {
             Logger.Initialization.Info($"IntelliSenseServer.Uninstall Begin: Version {ServerVersion} in {AppDomain.CurrentDomain.FriendlyName}");
             if (IsDisabled())
+            {
                 return;
+            }
 
             UnpublishRegistration();
             if (_isActive)
@@ -120,7 +121,7 @@ namespace ExcelDna.IntelliSense
                 Deactivate();
 
                 // See if there is another server to active
-                var highestRegistration = GetHighestPublishedRegistration();
+                RegistrationInfo highestRegistration = GetHighestPublishedRegistration();
                 if (highestRegistration != null)
                 {
                     ActivateServer(highestRegistration);
@@ -144,12 +145,14 @@ namespace ExcelDna.IntelliSense
             {
                 RegistrationInfo registrationInfo = GetActiveRegistrationInfo();
                 if (registrationInfo != null)
+                {
                     RefreshServer(registrationInfo);
+                }
             }
             Logger.Initialization.Info($"IntelliSenseServer.Refresh End");
         }
 
-        static void CurrentDomain_ProcessExit(object sender, EventArgs e)
+        private static void CurrentDomain_ProcessExit(object sender, EventArgs e)
         {
             // CONSIDER: We get this quite late in the shutdown
             //           We should try to find a way to identify Excel shutdown a lot earlier
@@ -170,7 +173,7 @@ namespace ExcelDna.IntelliSense
         // I.e when the add-in is explicitly unloaded via code or the add-ins dialog, or when the add-in is re-loaded 
         // (reload via File->Open is equivalent to unload, then load).
         // We don't expect DomainUnload to run when Excel is shutting down.
-        static void CurrentDomain_DomainUnload(object sender, EventArgs e)
+        private static void CurrentDomain_DomainUnload(object sender, EventArgs e)
         {
             Logger.Initialization.Verbose("IntelliSenseServer DomainUnload Begin");
 
@@ -213,7 +216,9 @@ namespace ExcelDna.IntelliSense
             try
             {
                 if (_helper != null)
+                {
                     _helper.Dispose();
+                }
 
                 _isActive = false;
                 ClearActiveRegistrationInfo();
@@ -246,7 +251,7 @@ namespace ExcelDna.IntelliSense
         //       The IntelliSense mechanism is co-operative between independent add-ins.
         //       Allowing a safe disable options is important to support future versions, and protect against problematic bugs.
         // Checks whether this IntelliSense Server version is completely disabled
-        static bool IsDisabled()
+        private static bool IsDisabled()
         {
             var machineDisabled = Registry.GetValue(DisabledVersionsMachineKeyName, DisabledVersionsValueName, null) as string;
             var userDisabled = Registry.GetValue(DisabledVersionsUserKeyName, DisabledVersionsValueName, null) as string;
@@ -267,7 +272,7 @@ namespace ExcelDna.IntelliSense
 
         // Attempts to activate the server described by registrationInfo
         // return true for success, false for any problems
-        static bool ActivateServer(RegistrationInfo registrationInfo)
+        private static bool ActivateServer(RegistrationInfo registrationInfo)
         {
             // Suppress errors if things go wrong, including unexpected return types.
             try
@@ -284,7 +289,7 @@ namespace ExcelDna.IntelliSense
 
         // Attempts to deactivate the server described by registrationInfo
         // returns true for success, false if there were problems, 
-        static bool DeactivateServer(RegistrationInfo registrationInfo)
+        private static bool DeactivateServer(RegistrationInfo registrationInfo)
         {
             // Suppress errors if things go wrong, including unexpected return types.
             try
@@ -304,7 +309,7 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        static bool RefreshServer(RegistrationInfo registrationInfo)
+        private static bool RefreshServer(RegistrationInfo registrationInfo)
         {
             // Suppress errors if things go wrong, including unexpected return types.
             try
@@ -325,9 +330,9 @@ namespace ExcelDna.IntelliSense
         }
 
         #region Registration
-        
+
         // NOTE: We have to be really careful about compatibility across versions here...
-        class RegistrationInfo : IComparable<RegistrationInfo>
+        private class RegistrationInfo : IComparable<RegistrationInfo>
         {
             public string XllPath;
             public Guid ServerId;
@@ -365,18 +370,23 @@ namespace ExcelDna.IntelliSense
             // Invalid version strings are considered very small (as if they are 0
             public static int CompareVersions(string versionString1, string versionString2)
             {
-                int[] version1 = ParseVersion(versionString1);
-                int[] version2 = ParseVersion(versionString2);
+                var version1 = ParseVersion(versionString1);
+                var version2 = ParseVersion(versionString2);
 
                 var maxLength = Math.Max(version1.Length, version2.Length);
-                for (int i = 0; i < maxLength; i++)
+                for (var i = 0; i < maxLength; i++)
                 {
-                    int v1 = (version1.Length - 1) < i ? 0 : version1[i];
-                    int v2 = (version2.Length - 1) < i ? 0 : version2[i];
+                    var v1 = (version1.Length - 1) < i ? 0 : version1[i];
+                    var v2 = (version2.Length - 1) < i ? 0 : version2[i];
                     if (v1 < v2)
+                    {
                         return -1;
+                    }
+
                     if (v1 > v2)
+                    {
                         return 1;
+                    }
                 }
                 return 0;
             }
@@ -384,14 +394,14 @@ namespace ExcelDna.IntelliSense
 
         // NOTE: We assume this will always run on the main thread in the process, so we have no synchronization.
         //       Max length for an environment variable is 32,767 characters.
-        static void PublishRegistration()
+        private static void PublishRegistration()
         {
             var oldServers = Environment.GetEnvironmentVariable(ServersVariable);
             var newServers = (oldServers == null) ? RegistrationString : string.Join(";", oldServers, RegistrationString);
             Environment.SetEnvironmentVariable(ServersVariable, newServers);
         }
 
-        static void UnpublishRegistration()
+        private static void UnpublishRegistration()
         {
             var oldServers = new List<string>(Environment.GetEnvironmentVariable(ServersVariable).Split(';'));
             var removed = oldServers.Remove(RegistrationString);
@@ -401,35 +411,35 @@ namespace ExcelDna.IntelliSense
         }
 
         // returns null if there is no active IntelliSense Server.
-        static RegistrationInfo GetActiveRegistrationInfo()
+        private static RegistrationInfo GetActiveRegistrationInfo()
         {
             var activeString = Environment.GetEnvironmentVariable(ActiveServerVariable);
             if (string.IsNullOrEmpty(activeString))
+            {
                 return null;
+            }
+
             return RegistrationInfo.FromRegistrationString(activeString);
         }
 
-        static void SetActiveRegistrationInfo()
+        private static void SetActiveRegistrationInfo()
         {
             var currentActive = Environment.GetEnvironmentVariable(ActiveServerVariable);
             Debug.Assert(currentActive == null, "ActiveServer already set while activating");
             Environment.SetEnvironmentVariable(ActiveServerVariable, RegistrationString);
         }
 
-        static void ClearActiveRegistrationInfo()
-        {
-            Environment.SetEnvironmentVariable(ActiveServerVariable, null);
-        }
+        private static void ClearActiveRegistrationInfo() => Environment.SetEnvironmentVariable(ActiveServerVariable, null);
 
-        static string RegistrationString
+        private static string RegistrationString
         {
             get
             {
-                var ri = new RegistrationInfo 
-                { 
+                var ri = new RegistrationInfo
+                {
                     XllPath = ExcelDnaUtil.XllPath,
                     ServerId = _serverId,
-                    Version = ServerVersion 
+                    Version = ServerVersion
                 };
                 return ri.ToRegistrationString();
             }
@@ -437,20 +447,19 @@ namespace ExcelDna.IntelliSense
 
         // Versions are dotted integer strings, e.g. 1.2.3
         // Invalid strings parse as [0]
-        static int[] ParseVersion(string versionString)
+        private static int[] ParseVersion(string versionString)
         {
             if (string.IsNullOrEmpty(versionString))
             {
-                return new int[] {0};
+                return new int[] { 0 };
             }
             var versionParts = versionString.Split('.');
-            int[] version = new int[versionParts.Length];
-            for (int i = 0; i < versionParts.Length; i++)
+            var version = new int[versionParts.Length];
+            for (var i = 0; i < versionParts.Length; i++)
             {
-                int versionPart;
-                if (!int.TryParse(versionParts[i], out versionPart))
+                if (!int.TryParse(versionParts[i], out var versionPart))
                 {
-                    return new int[] {0};
+                    return new int[] { 0 };
                 }
                 version[i] = versionPart;
             }
@@ -459,13 +468,17 @@ namespace ExcelDna.IntelliSense
 
         // Version patterns are either a single * (universal match) or a ","-joined lists of (dotted integer strings, with a possible trailing .* wildcard).
         // e.g. 1.2.*, which would be matched with regex 1\.2(\.\d+)*
-        static bool IsVersionMatch(string version, string versionPattern)
+        private static bool IsVersionMatch(string version, string versionPattern)
         {
             if (string.IsNullOrEmpty(versionPattern))
+            {
                 return false;
+            }
 
             if (versionPattern == "*")
+            {
                 return true;    // Universal pattern - matches all versions
+            }
 
             var regexParts = new List<string>();
             var parts = versionPattern.Split(',');
@@ -482,7 +495,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // returns null if there are none registered
-        static RegistrationInfo GetHighestPublishedRegistration()
+        private static RegistrationInfo GetHighestPublishedRegistration()
         {
             var servers = Environment.GetEnvironmentVariable(ServersVariable);
             if (servers == null)
@@ -498,20 +511,20 @@ namespace ExcelDna.IntelliSense
 
         #region IntelliSense control function registered with Excel
 
-        static void RegisterControlMacro()
+        private static void RegisterControlMacro()
         {
             Func<object, object> delControl = control => IntelliSenseServerControl(control);
             var name = RegistrationInfo.GetControlMacroName(_serverId);
-            ExcelIntegration.RegisterDelegates(new List<Delegate> { delControl }, 
+            ExcelIntegration.RegisterDelegates(new List<Delegate> { delControl },
                                              new List<object> { new ExcelCommandAttribute { Name = name } }, // Macros in .xlls are always hidden
                                              new List<List<object>> { new List<object> { null } });
             // No Unregistration - that will happen automatically (and is only needed) when we are unloaded.
         }
 
         // NOTE: The name here is used by Reflection above (when registering the method with Excel)
-        static object IntelliSenseServerControl(object control)
+        private static object IntelliSenseServerControl(object control)
         {
-            string controlMessage = control as string;
+            var controlMessage = control as string;
             if (controlMessage == ControlMessageActivate)
             {
                 Debug.Print("IntelliSenseServer.Activate in AppDomain: " + AppDomain.CurrentDomain.FriendlyName);

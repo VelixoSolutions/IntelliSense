@@ -52,7 +52,7 @@ namespace ExcelDna.IntelliSense
     // NOTE: To simplify configuration (so that we provide one TraceSource per referenced assembly) and still allow some grouping
     //       we use the EventId to define a trace event classification.
     // These names are not surfaced to the Trace Listeners - just the IDs, so we should document them.
-    enum IntelliSenseTraceEventId
+    internal enum IntelliSenseTraceEventId
     {
         Initialization = 1,
         Monitor = 2,
@@ -65,19 +65,19 @@ namespace ExcelDna.IntelliSense
     // TraceLogger manages the IntelliSenseTraceSource that we use for logging.
     // It deals with lifetime (particularly closing the TraceSource if the library is unloaded).
     // The default configuration of the TraceSource is set here, and can be overridden in the .xll.config file.
-    class TraceLogger
+    internal class TraceLogger
     {
-        static volatile bool s_LoggingEnabled = true;
-        static volatile bool s_LoggingInitialized;
-        static volatile bool s_AppDomainShutdown;
-        const string TraceSourceName = "ExcelDna.IntelliSense";
+        private static volatile bool s_LoggingEnabled = true;
+        private static volatile bool s_LoggingInitialized;
+        private static volatile bool s_AppDomainShutdown;
+        private const string TraceSourceName = "ExcelDna.IntelliSense";
         internal static TraceSource IntelliSenseTraceSource;
 
         public static void Initialize()
         {
             if (!s_LoggingInitialized)
             {
-                bool loggingEnabled = false;
+                var loggingEnabled = false;
                 // DOCUMENT: By default the TraceSource is configured to source only Warning, Error and Fatal.
                 //           the configuration can override this.
                 IntelliSenseTraceSource = new TraceSource(TraceSourceName, SourceLevels.Warning);
@@ -112,7 +112,7 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        static bool ValidateSettings(TraceSource traceSource, TraceEventType traceLevel)
+        private static bool ValidateSettings(TraceSource traceSource, TraceEventType traceLevel)
         {
             if (!s_LoggingEnabled)
             {
@@ -133,36 +133,38 @@ namespace ExcelDna.IntelliSense
             return true;
         }
 
-        static void ProcessExitEvent(object sender, EventArgs e)
+        private static void ProcessExitEvent(object sender, EventArgs e)
         {
             Close();
             s_AppDomainShutdown = true;
         }
 
-        static void AppDomainUnloadEvent(object sender, EventArgs e)
+        private static void AppDomainUnloadEvent(object sender, EventArgs e)
         {
             Close();
             s_AppDomainShutdown = true;
         }
 
-        static void Close()
+        private static void Close()
         {
             if (IntelliSenseTraceSource != null)
+            {
                 IntelliSenseTraceSource.Close();
+            }
         }
 
     }
 
-    class Logger
+    internal class Logger
     {
-        int _eventId;
+        private readonly int _eventId;
 
-        Logger(IntelliSenseTraceEventId traceEventId)
+        private Logger(IntelliSenseTraceEventId traceEventId)
         {
             _eventId = (int)traceEventId;
         }
 
-        void Log(TraceEventType eventType, string message)
+        private void Log(TraceEventType eventType, string message)
         {
             try
             {
@@ -174,7 +176,7 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        void Log(TraceEventType eventType, string format, params object[] args)
+        private void Log(TraceEventType eventType, string format, params object[] args)
         {
             try
             {
@@ -186,45 +188,21 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        public void Verbose(string message)
-        {
-            Log(TraceEventType.Verbose, message);
-        }
+        public void Verbose(string message) => Log(TraceEventType.Verbose, message);
 
-        public void Verbose(string format, params object[] args)
-        {
-            Log(TraceEventType.Verbose, format, args);
-        }
+        public void Verbose(string format, params object[] args) => Log(TraceEventType.Verbose, format, args);
 
-        public void Info(string message)
-        {
-            Log(TraceEventType.Information, message);
-        }
+        public void Info(string message) => Log(TraceEventType.Information, message);
 
-        public void Info(string format, params object[] args)
-        {
-            Log(TraceEventType.Information, format, args);
-        }
+        public void Info(string format, params object[] args) => Log(TraceEventType.Information, format, args);
 
-        public void Warn(string message)
-        {
-            Log(TraceEventType.Warning, message);
-        }
+        public void Warn(string message) => Log(TraceEventType.Warning, message);
 
-        public void Warn(string format, params object[] args)
-        {
-            Log(TraceEventType.Warning, format, args);
-        }
+        public void Warn(string format, params object[] args) => Log(TraceEventType.Warning, format, args);
 
-        public void Error(string message)
-        {
-            Log(TraceEventType.Error, message);
-        }
+        public void Error(string message) => Log(TraceEventType.Error, message);
 
-        public void Error(string format, params object[] args)
-        {
-            Log(TraceEventType.Error, format, args);
-        }
+        public void Error(string format, params object[] args) => Log(TraceEventType.Error, format, args);
 
         public void Error(Exception ex, string message, params object[] args)
         {
@@ -242,11 +220,11 @@ namespace ExcelDna.IntelliSense
             Log(TraceEventType.Error, "{0} : {1} - {2}", message, ex.GetType().Name, ex.Message);
         }
 
-        static internal Logger Initialization { get; } = new Logger(IntelliSenseTraceEventId.Initialization);
-        static internal Logger Provider { get; } = new Logger(IntelliSenseTraceEventId.Provider);
-        static internal Logger WinEvents { get; } = new Logger(IntelliSenseTraceEventId.WinEvents);
-        static internal Logger WindowWatcher { get; } = new Logger(IntelliSenseTraceEventId.WindowWatcher);
-        static internal Logger Display { get; } = new Logger(IntelliSenseTraceEventId.Display);
-        static internal Logger Monitor { get; } = new Logger(IntelliSenseTraceEventId.Monitor);
+        internal static Logger Initialization { get; } = new Logger(IntelliSenseTraceEventId.Initialization);
+        internal static Logger Provider { get; } = new Logger(IntelliSenseTraceEventId.Provider);
+        internal static Logger WinEvents { get; } = new Logger(IntelliSenseTraceEventId.WinEvents);
+        internal static Logger WindowWatcher { get; } = new Logger(IntelliSenseTraceEventId.WindowWatcher);
+        internal static Logger Display { get; } = new Logger(IntelliSenseTraceEventId.Display);
+        internal static Logger Monitor { get; } = new Logger(IntelliSenseTraceEventId.Monitor);
     }
 }

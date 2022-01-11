@@ -9,9 +9,9 @@ namespace ExcelDna.IntelliSense
     // An alternative representation is as a string with extra attributes attached
     // each indicating a range in the string to modify.
     // (like NSAttributedString)
-    class FormattedText : IEnumerable<TextLine>
+    internal class FormattedText : IEnumerable<TextLine>
     {
-        readonly List<TextLine> _lines;
+        private readonly List<TextLine> _lines;
 
         public FormattedText()
         {
@@ -23,7 +23,9 @@ namespace ExcelDna.IntelliSense
         public void Add(IEnumerable<TextLine> lines)
         {
             if (lines != null)
+            {
                 _lines.AddRange(lines);
+            }
         }
 
         public IEnumerator<TextLine> GetEnumerator() => _lines.GetEnumerator();
@@ -35,7 +37,7 @@ namespace ExcelDna.IntelliSense
 
     public class TextLine : IEnumerable<TextRun>
     {
-        readonly List<TextRun> _runs;
+        private readonly List<TextRun> _runs;
 
         public TextLine()
         {
@@ -54,7 +56,7 @@ namespace ExcelDna.IntelliSense
     public class TextRun
     {
         public string Text { get; set; }
-        public FontStyle Style { get; set; }    
+        public FontStyle Style { get; set; }
         public string LinkAddress { get; set; }
         public bool IsLink => !string.IsNullOrEmpty(LinkAddress);
     }

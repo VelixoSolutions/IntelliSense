@@ -1,12 +1,11 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace ExcelDna.IntelliSense
 {
-    static class FormulaParser
+    internal static class FormulaParser
     {
         // Set from IntelliSenseDisplay.Initialize
         public static char ListSeparator = ',';
@@ -28,7 +27,7 @@ namespace ExcelDna.IntelliSense
             {
                 formulaPrefix = string.Concat(formulaPrefix, '\"');
             }
-            
+
             // Remove the strings.
             // Note: in Excel, in order to put a double-quotes in a string, one has to double the double-quotes.
             // For instance, "a""b" for a"b. Since we only want to hide the strings in order to count the commas, 
@@ -44,16 +43,16 @@ namespace ExcelDna.IntelliSense
             }
 
             // Find the function name and the argument index
-            int lastOpeningParenthesis = formulaPrefix.LastIndexOf("(", formulaPrefix.Length - 1, StringComparison.Ordinal);
+            var lastOpeningParenthesis = formulaPrefix.LastIndexOf("(", formulaPrefix.Length - 1, StringComparison.Ordinal);
 
             if (lastOpeningParenthesis > -1)
             {
-                var match = Regex.Match(formulaPrefix.Substring(0, lastOpeningParenthesis), functionNameRegex);
+                Match match = Regex.Match(formulaPrefix.Substring(0, lastOpeningParenthesis), functionNameRegex);
                 if (match.Success)
                 {
                     functionName = match.Groups[functionNameGroupName].Value;
 
-                    string argumentsPart = formulaPrefix.Substring(lastOpeningParenthesis, formulaPrefix.Length - lastOpeningParenthesis);
+                    var argumentsPart = formulaPrefix.Substring(lastOpeningParenthesis, formulaPrefix.Length - lastOpeningParenthesis);
 
                     // Hide array formulae
                     // Ex: =SomeFunction("a", {"a", "b", "c"
@@ -82,11 +81,13 @@ namespace ExcelDna.IntelliSense
         internal static string GetLineBeforeFunctionName(string formulaPrefix, string functionName)
         {
             // TODO: This should be cleaned up - just added something for testing...
-            int lastFuncStart = formulaPrefix.LastIndexOf(functionName);
+            var lastFuncStart = formulaPrefix.LastIndexOf(functionName);
             if (lastFuncStart < 0)
+            {
                 return "";
+            }
 
-            int lastLineStart = formulaPrefix.LastIndexOf('\n', lastFuncStart) + 1;
+            var lastLineStart = formulaPrefix.LastIndexOf('\n', lastFuncStart) + 1;
             return formulaPrefix.Substring(lastLineStart, lastFuncStart - lastLineStart);
         }
     }
