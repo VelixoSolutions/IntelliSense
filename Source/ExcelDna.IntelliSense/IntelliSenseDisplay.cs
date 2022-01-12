@@ -58,7 +58,8 @@ namespace ExcelDna.IntelliSense
             object result;
             if (XlCallInt.TryExcel(XlCallInt.xlfGetWorkspace, out result, 37) == XlCallInt.XlReturn.XlReturnSuccess)
             {
-                if (result is object[,] options)
+                object[,] options = result as object[,];
+                if (options != null)
                 {
                     listSeparator = (string)options[0, 4];
                     Logger.Initialization.Verbose($"InitializeOptions - Set ListSeparator to {listSeparator}");
@@ -475,7 +476,7 @@ namespace ExcelDna.IntelliSense
 
         // TODO: Performance / efficiency - cache these somehow
         // TODO: Probably not a good place for LINQ !?
-        static readonly string[] s_newLineStringArray = { Environment.NewLine };
+        static readonly string[] s_newLineStringArray = new string[] { Environment.NewLine };
         IEnumerable<TextLine> GetFunctionDescriptionOrNull(FunctionInfo functionInfo)
         {
             var description = functionInfo.Description;

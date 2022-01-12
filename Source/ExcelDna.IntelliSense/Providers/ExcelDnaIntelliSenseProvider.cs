@@ -76,7 +76,7 @@ namespace ExcelDna.IntelliSense
                         string description = regInfo[i, 9] as string;
 
                         string argumentStr = regInfo[i, 4] as string;
-                        string[] argumentNames = string.IsNullOrEmpty(argumentStr) ? Array.Empty<string>() : argumentStr.Split(',');
+                        string[] argumentNames = string.IsNullOrEmpty(argumentStr) ? new string[0] : argumentStr.Split(',');
 
                         List<FunctionInfo.ArgumentInfo> argumentInfos = new List<FunctionInfo.ArgumentInfo>();
                         for (int j = 0; j < argumentNames.Length; j++)
