@@ -13,40 +13,37 @@ namespace ExcelDna.IntelliSense
     // CONSIDER: Maybe some ideas from here: http://codereview.stackexchange.com/questions/55916/lightweight-rich-link-label
 
     // TODO: Drop shadow: http://stackoverflow.com/questions/16493698/drop-shadow-on-a-borderless-winform
-    internal class ToolTipForm : Form
+    class ToolTipForm  : Form
     {
-        private FormattedText _text;
-        private int _linePrefixWidth;
-        private System.ComponentModel.IContainer components;
-        private Win32Window _owner;
-
+        FormattedText _text;
+        int _linePrefixWidth;
+        System.ComponentModel.IContainer components;
+        Win32Window _owner;
         // Help Link
-        private Rectangle _linkClientRect;
-        private bool _isHoveringOverLink;
-        private string _linkAddress;
-        private long _showTimeTicks; // Track to prevent mouse click-through into help
-                                     // Mouse Capture information for moving        
-
-        private bool _captured = false;
-        private Point _mouseDownScreenLocation;
-        private Point _mouseDownFormLocation;
-
+        Rectangle _linkClientRect;
+        bool _isHoveringOverLink;
+        string _linkAddress;
+        long _showTimeTicks; // Track to prevent mouse click-through into help
+        // Mouse Capture information for moving        
+        bool _captured = false;
+        Point _mouseDownScreenLocation;
+        Point _mouseDownFormLocation;
         // We keep track of this, else Visibility seems to confuse things...
-        private int _currentLeft;
-        private int _currentTop;
-        private int _showLeft;
-        private int _showTop;
-        private int _topOffset; // Might be trying to move the tooltip out of the way of Excel's tip - we track this extra offset here
-        private int? _listLeft;
-
+        int _currentLeft;
+        int _currentTop;
+        int _showLeft;
+        int _showTop;
+        int _topOffset; // Might be trying to move the tooltip out of the way of Excel's tip - we track this extra offset here
+        int? _listLeft;
         // Various graphics object cached
-        private readonly Color _textColor;
-        private readonly Color _linkColor;
-        private readonly Pen _borderPen;
-        private readonly Pen _borderLightPen;
-        private readonly Dictionary<FontStyle, Font> _fonts;
-        private ToolTip tipDna;
-        private static Font s_standardFont;
+        Color _textColor;
+        Color _linkColor;
+        Pen _borderPen;
+        Pen _borderLightPen;
+        Dictionary<FontStyle, Font> _fonts;
+        ToolTip tipDna;
+
+        static Font s_standardFont;
 
         public ToolTipForm(IntPtr hwndOwner)
         {
@@ -73,7 +70,7 @@ namespace ExcelDna.IntelliSense
 
         private Font GetFont(FontStyle style)
         {
-            _fonts.TryGetValue(style, out Font font);
+            _fonts.TryGetValue(style, out var font);
 
             if (font == null)
             {
@@ -120,7 +117,7 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        private void ShowToolTip()
+        void ShowToolTip()
         {
             try
             {
@@ -137,7 +134,7 @@ namespace ExcelDna.IntelliSense
             Debug.Print($"@@@ ShowToolTip - Old TopOffset: {_topOffset}, New TopOffset: {topOffset}");
             _text = text;
             _linePrefixWidth = MeasureFormulaStringWidth(linePrefix);
-
+            
             left += _linePrefixWidth;
 
             // Mimic Excel native tooltip behaviour: it never goes beyond the screen's leftmost boundary.
@@ -189,10 +186,7 @@ namespace ExcelDna.IntelliSense
             get
             {
                 if (_owner == null)
-                {
                     return IntPtr.Zero;
-                }
-
                 return _owner.Handle;
             }
             set
@@ -212,20 +206,18 @@ namespace ExcelDna.IntelliSense
         }
 
         // TODO: Move or clean up or something...
-        private int MeasureFormulaStringWidth(string formulaString)
+        int MeasureFormulaStringWidth(string formulaString)
         {
             if (string.IsNullOrEmpty(formulaString))
-            {
                 return 0;
-            }
 
-            Size size = TextRenderer.MeasureText(formulaString, s_standardFont);
+            var size = TextRenderer.MeasureText(formulaString, s_standardFont);
             return size.Width;
         }
 
         #region Mouse Handling
-
-        private void MouseButtonDown(Point screenLocation)
+        
+        void MouseButtonDown(Point screenLocation)
         {
             if (!_linkClientRect.Contains(PointToClient(screenLocation)))
             {
@@ -236,19 +228,19 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        private void MouseMoved(Point screenLocation)
+        void MouseMoved(Point screenLocation)
         {
             if (_captured)
             {
-                var dx = screenLocation.X - _mouseDownScreenLocation.X;
-                var dy = screenLocation.Y - _mouseDownScreenLocation.Y;
+                int dx = screenLocation.X - _mouseDownScreenLocation.X;
+                int dy = screenLocation.Y - _mouseDownScreenLocation.Y;
                 _currentLeft = _mouseDownFormLocation.X + dx;
                 _currentTop = _mouseDownFormLocation.Y + dy;
                 Invalidate();
                 return;
             }
 
-            var isHoveringOverlink = _linkClientRect.Contains(PointToClient(screenLocation));
+            bool isHoveringOverlink = _linkClientRect.Contains(PointToClient(screenLocation));
 
             if (isHoveringOverlink != _isHoveringOverLink)
             {
@@ -256,12 +248,12 @@ namespace ExcelDna.IntelliSense
                 Invalidate();
             }
 
-            Cursor.Current = isHoveringOverlink
-                ? Cursors.Hand
+            Cursor.Current = isHoveringOverlink 
+                ? Cursors.Hand 
                 : Cursors.SizeAll;
         }
 
-        private void MouseButtonUp(Point screenLocation)
+        void MouseButtonUp(Point screenLocation)
         {
             if (_captured)
             {
@@ -274,9 +266,7 @@ namespace ExcelDna.IntelliSense
             // as a click on the toolip, launching the help erroneously.
             var nowTicks = DateTime.UtcNow.Ticks;
             if (nowTicks - _showTimeTicks < 5000000)
-            {
                 return;
-            }
 
             var inLink = _linkClientRect.Contains(PointToClient(screenLocation));
             if (inLink)
@@ -285,7 +275,7 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        private void LaunchLink(string address)
+        void LaunchLink(string address)
         {
             try
             {
@@ -331,10 +321,10 @@ namespace ExcelDna.IntelliSense
                 // NOTE: In this case, the Excel process does not quit after closing Excel...
             }
         }
-
-        private Point GetMouseLocation(IntPtr lParam)
+        
+        Point GetMouseLocation(IntPtr lParam)
         {
-            int x = (short)(unchecked((int)(long)lParam) & 0xFFFF);
+            int x = (short)(unchecked((int)(long)lParam)  & 0xFFFF);
             int y = (short)((unchecked((int)(long)lParam) >> 16) & 0xFFFF);
             return PointToScreen(new Point(x, y));
         }
@@ -353,23 +343,23 @@ namespace ExcelDna.IntelliSense
             const int heightPadding = 2;
             const int minLineHeight = 16;
 
-            var layoutLeft = ClientRectangle.Location.X + leftPadding;
-            var layoutTop = ClientRectangle.Location.Y;
+            int layoutLeft = ClientRectangle.Location.X + leftPadding;
+            int layoutTop = ClientRectangle.Location.Y;
 
-            TextFormatFlags textFormatFlags = TextFormatFlags.Left |
-                                  TextFormatFlags.Top |
-                                  TextFormatFlags.NoPadding |
-                                  TextFormatFlags.SingleLine |
+            var textFormatFlags = TextFormatFlags.Left | 
+                                  TextFormatFlags.Top | 
+                                  TextFormatFlags.NoPadding | 
+                                  TextFormatFlags.SingleLine | 
                                   TextFormatFlags.ExternalLeading;
 
-            var lineWidths = new List<int>();
-            var currentHeight = 0; // Measured from layoutTop, going down
-            foreach (TextLine line in _text)
+            List<int> lineWidths = new List<int>();
+            int currentHeight = 0; // Measured from layoutTop, going down
+            foreach (var line in _text)
             {
                 currentHeight += linePadding;
-                var lineHeight = minLineHeight;
-                var lineWidth = 0;
-                foreach (TextRun run in line)
+                int lineHeight = minLineHeight;
+                int lineWidth = 0;
+                foreach (var run in line)
                 {
                     // We support only a single link, for now
                     Font font;
@@ -388,14 +378,11 @@ namespace ExcelDna.IntelliSense
 
                     foreach (var text in GetRunParts(run.Text))
                     {
-                        if (text == "")
-                        {
-                            continue;
-                        }
+                        if (text == "") continue;
 
                         var location = new Point(layoutLeft + lineWidth, layoutTop + currentHeight);
                         var proposedSize = new Size(maxWidth - lineWidth, maxHeight - currentHeight);
-                        Size textSize = TextRenderer.MeasureText(e.Graphics, text, font, proposedSize, textFormatFlags);
+                        var textSize = TextRenderer.MeasureText(e.Graphics, text, font, proposedSize, textFormatFlags);
                         if (textSize.Width <= proposedSize.Width)
                         {
                             // Draw it in this line
@@ -461,10 +448,10 @@ namespace ExcelDna.IntelliSense
             DrawRoundedRectangle(e.Graphics, new RectangleF(0, 0, Width - 1, Height - 1), 2, 2);
         }
 
-        private static IEnumerable<string> GetRunParts(string runText)
+        static IEnumerable<string> GetRunParts(string runText)
         {
-            var lastStart = 0;
-            for (var i = 0; i < runText.Length; i++)
+            int lastStart = 0;
+            for (int i = 0; i < runText.Length; i++)
             {
                 if (runText[i] == ',' || runText[i] == ' ')
                 {
@@ -475,9 +462,9 @@ namespace ExcelDna.IntelliSense
             yield return runText.Substring(lastStart);
         }
 
-        private void DrawRoundedRectangle(Graphics g, RectangleF r, float radiusX, float radiusY)
+        void DrawRoundedRectangle(Graphics g, RectangleF r, float radiusX, float radiusY)
         {
-            SmoothingMode oldMode = g.SmoothingMode;
+            var oldMode = g.SmoothingMode;
             g.SmoothingMode = SmoothingMode.None;
 
             g.DrawRectangle(_borderLightPen, new Rectangle((int)r.X, (int)r.Y, 1, 1));
@@ -489,11 +476,11 @@ namespace ExcelDna.IntelliSense
             g.SmoothingMode = oldMode;
         }
 
-        private void UpdateLocation(int width, int height)
+        void UpdateLocation(int width, int height)
         {
-            Rectangle workingArea = Screen.GetWorkingArea(new Point(_currentLeft, _currentTop + _topOffset));
-            var tipFits = workingArea.Contains(new Rectangle(_currentLeft, _currentTop + _topOffset, width, height));
-
+            var workingArea = Screen.GetWorkingArea(new Point(_currentLeft, _currentTop + _topOffset));
+            bool tipFits = workingArea.Contains(new Rectangle(_currentLeft, _currentTop + _topOffset, width, height));
+            
             if (!tipFits && (_currentLeft == _showLeft && _currentTop == _showTop))
             {
                 // It doesn't fit and it's still where we initially tried to show it 
@@ -547,35 +534,38 @@ namespace ExcelDna.IntelliSense
 
         protected override bool ShowWithoutActivation => true;
 
-        private void InitializeComponent()
+        void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
-            tipDna = new System.Windows.Forms.ToolTip(components);
-            SuspendLayout();
+            this.components = new System.ComponentModel.Container();
+            this.tipDna = new System.Windows.Forms.ToolTip(this.components);
+            this.SuspendLayout();
             // 
             // tipDna
             // 
-            tipDna.ShowAlways = true;
+            this.tipDna.ShowAlways = true;
             // 
             // ToolTipForm
             // 
-            AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            BackColor = System.Drawing.Color.White;
-            ClientSize = new System.Drawing.Size(114, 20);
-            ControlBox = false;
-            DoubleBuffered = true;
-            ForeColor = System.Drawing.Color.DimGray;
-            FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
-            Name = "ToolTipForm";
-            ShowInTaskbar = false;
-            tipDna.SetToolTip(this, Resources.ClickFunctionNameInTooltipWindowToAccessHelp);
-            ResumeLayout(false);
+            this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.BackColor = System.Drawing.Color.White;
+            this.ClientSize = new System.Drawing.Size(114, 20);
+            this.ControlBox = false;
+            this.DoubleBuffered = true;
+            this.ForeColor = System.Drawing.Color.DimGray;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            this.Name = "ToolTipForm";
+            this.ShowInTaskbar = false;
+            this.tipDna.SetToolTip(this, Resources.ClickFunctionNameInTooltipWindowToAccessHelp);
+            this.ResumeLayout(false);
 
         }
 
-        internal static void SetStandardFont(string standardFontName, double standardFontSize) => s_standardFont = new Font(standardFontName, (float)standardFontSize);
+        internal static void SetStandardFont(string standardFontName, double standardFontSize)
+        {
+            s_standardFont = new Font(standardFontName, (float)standardFontSize);
+        }
 
-        private class Win32Window : IWin32Window
+        class Win32Window : IWin32Window
         {
             public IntPtr Handle
             {

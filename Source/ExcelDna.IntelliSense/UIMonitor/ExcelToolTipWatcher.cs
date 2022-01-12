@@ -5,7 +5,7 @@ using System.Threading;
 
 namespace ExcelDna.IntelliSense
 {
-    internal class ExcelToolTipWatcher : IDisposable
+    class ExcelToolTipWatcher : IDisposable
     {
         public enum ToolTipChangeType
         {
@@ -33,13 +33,12 @@ namespace ExcelDna.IntelliSense
 
         // CONSIDER: What should this look like?
         public IntPtr GetLastToolTipOrZero() => _toolTips.Count > 0 ? _toolTips[_toolTips.Count - 1] : IntPtr.Zero;
-
         // CONSIDER: Rather a Stack? Check the assumption that Hide happens in reverse order
-        private readonly List<IntPtr> _toolTips = new List<IntPtr>();
-        private readonly SynchronizationContext _syncContextAuto; // Not used... 
-        private WindowWatcher _windowWatcher;
+        List<IntPtr> _toolTips = new List<IntPtr>();
+        SynchronizationContext _syncContextAuto; // Not used... 
+        WindowWatcher _windowWatcher;
 
-        public ExcelToolTipWatcher(WindowWatcher windowWatcher, SynchronizationContext syncContextAuto)
+        public ExcelToolTipWatcher (WindowWatcher windowWatcher, SynchronizationContext syncContextAuto)
         {
             _syncContextAuto = syncContextAuto;
             _windowWatcher = windowWatcher;
@@ -47,7 +46,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on our automation thread
-        private void _windowWatcher_ExcelToolTipWindowChanged(object sender, WindowWatcher.WindowChangedEventArgs e)
+        void _windowWatcher_ExcelToolTipWindowChanged(object sender, WindowWatcher.WindowChangedEventArgs e)
         {
             switch (e.Type)
             {
@@ -60,10 +59,7 @@ namespace ExcelDna.IntelliSense
                     break;
                 case WindowWatcher.WindowChangedEventArgs.ChangeType.Hide:
                     if (_toolTips.Remove(e.WindowHandle))
-                    {
                         ToolTipChanged?.Invoke(this, new ToolTipChangeEventArgs(ToolTipChangeType.Hide, e.WindowHandle));
-                    }
-
                     break;
                 case WindowWatcher.WindowChangedEventArgs.ChangeType.Destroy:
                     // Not expecting this anymore - Destroy is no longer routed from the WinEvents.

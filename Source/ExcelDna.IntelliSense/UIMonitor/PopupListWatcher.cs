@@ -7,24 +7,24 @@ namespace ExcelDna.IntelliSense
 {
     // The Popuplist is shown both for function selection, and for some argument selection lists (e.g. TRUE/FALSE).
     // We ignore the reason for showing, and match purely on the text of the selected item.
-    internal class PopupListWatcher : IDisposable
+    class PopupListWatcher : IDisposable
     {
-        private IntPtr _hwndPopupList = IntPtr.Zero;
-        private int _selectedItemIndex = -1;
+        IntPtr _hwndPopupList = IntPtr.Zero;
+        int _selectedItemIndex = -1;
 
         // NOTE: Event will always be raised on our automation thread
         public event EventHandler SelectedItemChanged;  // Either text or location
 
-        public bool IsVisible { get; private set; } = false;
+        public bool IsVisible{ get; private set; } = false;
         public string SelectedItemText { get; private set; } = string.Empty;
         public Rect SelectedItemBounds { get; private set; } = Rect.Empty;
         public Rect ListBounds { get; private set; } = Rect.Empty;
         public IntPtr PopupListHandle => _hwndPopupList;
 
-        private readonly SynchronizationContext _syncContextAuto;
-        private readonly SynchronizationContext _syncContextMain;
-        private WindowWatcher _windowWatcher;
-        private WinEventHook _selectionChangeHook = null;
+        SynchronizationContext _syncContextAuto;
+        SynchronizationContext _syncContextMain;
+        WindowWatcher _windowWatcher;
+        WinEventHook _selectionChangeHook = null;
 
         public PopupListWatcher(WindowWatcher windowWatcher, SynchronizationContext syncContextAuto, SynchronizationContext syncContextMain)
         {
@@ -36,7 +36,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on our automation thread
-        private void _windowWatcher_PopupListWindowChanged(object sender, WindowWatcher.WindowChangedEventArgs e)
+        void _windowWatcher_PopupListWindowChanged(object sender, WindowWatcher.WindowChangedEventArgs e)
         {
             switch (e.Type)
             {
@@ -83,27 +83,29 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on our automation thread
-        private void _windowWatcher_FormulaEditLocationChanged(object sender, EventArgs e)
+        void _windowWatcher_FormulaEditLocationChanged(object sender, EventArgs e)
         {
             if (IsVisible && _selectedItemIndex != -1 && _hwndPopupList != IntPtr.Zero)
             {
-                IntPtr hwndListView = Win32Helper.GetFirstChildWindow(_hwndPopupList);
+                string text;
+                Rect itemBounds;
+                var hwndListView = Win32Helper.GetFirstChildWindow(_hwndPopupList);
                 ListBounds = Win32Helper.GetWindowBounds(_hwndPopupList);
-                Win32Helper.GetListViewSelectedItemInfo(hwndListView, out var text, out Rect itemBounds);
+                Win32Helper.GetListViewSelectedItemInfo(hwndListView, out text, out itemBounds);
                 itemBounds.Offset(ListBounds.Left, ListBounds.Top);
                 SelectedItemBounds = itemBounds;
                 OnSelectedItemChanged();
             }
         }
-
+        
         // Runs on our automation thread
-        private void InstallEventHandlers()
+        void InstallEventHandlers()
         {
             Logger.WindowWatcher.Verbose($"PopupList Installing event handlers on thread {Thread.CurrentThread.ManagedThreadId}");
             try
             {
                 // TODO: Clean up 
-                IntPtr hwndListView = Win32Helper.GetFirstChildWindow(_hwndPopupList);
+                var hwndListView = Win32Helper.GetFirstChildWindow(_hwndPopupList);
 
                 _selectionChangeHook = new WinEventHook(WinEventHook.WinEvent.EVENT_OBJECT_SELECTION, WinEventHook.WinEvent.EVENT_OBJECT_SELECTION, _syncContextAuto, _syncContextMain, hwndListView);
                 _selectionChangeHook.WinEventReceived += _selectionChangeHook_WinEventReceived;
@@ -118,13 +120,13 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        private void _selectionChangeHook_WinEventReceived(object sender, WinEventHook.WinEventArgs e)
+        void _selectionChangeHook_WinEventReceived(object sender, WinEventHook.WinEventArgs e)
         {
             Logger.WindowWatcher.Verbose($"PopupList PopupListElementSelectedHandler on thread {Thread.CurrentThread.ManagedThreadId}");
             UpdateSelectedItem();
         }
 
-        private void UpdateSelectedItem()
+        void UpdateSelectedItem()
         {
             if (_hwndPopupList == IntPtr.Zero)
             {
@@ -150,10 +152,12 @@ namespace ExcelDna.IntelliSense
             }
             else
             {
-                IntPtr hwndListView = Win32Helper.GetFirstChildWindow(_hwndPopupList);
+                string text;
+                Rect itemBounds;
+                var hwndListView = Win32Helper.GetFirstChildWindow(_hwndPopupList);
                 ListBounds = Win32Helper.GetWindowBounds(_hwndPopupList);
 
-                _selectedItemIndex = Win32Helper.GetListViewSelectedItemInfo(hwndListView, out var text, out Rect itemBounds);
+                _selectedItemIndex = Win32Helper.GetListViewSelectedItemInfo(hwndListView, out text, out itemBounds);
                 if (string.IsNullOrEmpty(text))
                 {
                     // We (unexpectedly) failed to get information about the selected item - not sure this is a problem
@@ -175,7 +179,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Raises the event on the automation thread (but the SyncContext.Post here is redundant)
-        private void OnSelectedItemChanged()
+        void OnSelectedItemChanged()
         {
             Logger.WindowWatcher.Verbose($"PopupList SelectedItemChanged {SelectedItemText} ListBounds: {ListBounds}");
             _syncContextAuto.Post(_ => SelectedItemChanged?.Invoke(this, EventArgs.Empty), null);

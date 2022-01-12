@@ -11,7 +11,7 @@ namespace ExcelDna.IntelliSense
     // NOTE: Currently we make the SetWinEventHook call on the main Excel thread, which is pumping Windows messages.
     //       In an alternative implementation we could either create our own thread that pumps Windows messages and use this for WinEvents, 
     //       or we could change our automation thread to also pump windows messages.
-    internal class WinEventHook : IDisposable
+    class WinEventHook : IDisposable
     {
         public class WinEventArgs : EventArgs
         {
@@ -35,20 +35,20 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        private delegate void WinEventDelegate(
+        delegate void WinEventDelegate(
               IntPtr hWinEventHook, WinEventHook.WinEvent eventType,
               IntPtr hWnd, WinEventObjectId idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
 
         [DllImport("user32.dll")]
-        private static extern IntPtr SetWinEventHook(
+        static extern IntPtr SetWinEventHook(
               WinEvent eventMin, WinEvent eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc,
               uint idProcess, uint idThread, SetWinEventHookFlags dwFlags);
 
         [DllImport("user32.dll")]
-        private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+        static extern bool UnhookWinEvent(IntPtr hWinEventHook);
 
         [Flags]
-        private enum SetWinEventHookFlags : uint
+        enum SetWinEventHookFlags : uint
         {
             WINEVENT_INCONTEXT = 4,
             WINEVENT_OUTOFCONTEXT = 0,
@@ -82,7 +82,7 @@ namespace ExcelDna.IntelliSense
             EVENT_OBJECT_TEXTSELECTIONCHANGED = 0x8014, // hwnd ID idChild is item w? test selection change
             EVENT_OBJECT_CONTENTSCROLLED = 0x8015,
             EVENT_SYSTEM_ARRANGMENTPREVIEW = 0x8016,
-            EVENT_SYSTEM_MOVESIZESTART = 0x000A,
+            EVENT_SYSTEM_MOVESIZESTART = 0x000A, 
             EVENT_SYSTEM_MOVESIZEEND = 0x000B,  // The movement or resizing of a window has finished. This event is sent by the system, never by servers.
             EVENT_SYSTEM_MINIMIZESTART = 0x0016,    // A window object is about to be minimized. 
             EVENT_SYSTEM_MINIMIZEEND = 0x0017,      // A window object is about to be restored. 
@@ -112,14 +112,13 @@ namespace ExcelDna.IntelliSense
 
         public event EventHandler<WinEventArgs> WinEventReceived;
 
-        /* readonly */
-        private IntPtr _hWinEventHook;
-        private readonly SynchronizationContext _syncContextAuto;
-        private readonly SynchronizationContext _syncContextMain;
-        private readonly IntPtr _hWndFilterOrZero;    // If non-zero, only these window events are processed
-        private readonly WinEventDelegate _handleWinEventDelegate;  // Ensures delegate that we pass to SetWinEventHook is not GC'd
-        private readonly WinEvent _eventMin;
-        private readonly WinEvent _eventMax;
+        /* readonly */ IntPtr _hWinEventHook;
+        readonly SynchronizationContext _syncContextAuto;
+        readonly SynchronizationContext _syncContextMain;
+        readonly IntPtr _hWndFilterOrZero;    // If non-zero, only these window events are processed
+        readonly WinEventDelegate _handleWinEventDelegate;  // Ensures delegate that we pass to SetWinEventHook is not GC'd
+        readonly WinEvent _eventMin;
+        readonly WinEvent _eventMax;
 
         // Can be called on any thread, but installed by calling into the main thread, and will only start receiving events then
         public WinEventHook(WinEvent eventMin, WinEvent eventMax, SynchronizationContext syncContextAuto, SynchronizationContext syncContextMain, IntPtr hWndFilterOrZero)
@@ -134,7 +133,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Must run on the main Excel thread (or another thread where Windows messages are pumped)
-        private void InstallWinEventHook(object _)
+        void InstallWinEventHook(object _)
         {
             var excelProcessId = Win32Helper.GetExcelProcessId();
             _hWinEventHook = SetWinEventHook(_eventMin, _eventMax, IntPtr.Zero, _handleWinEventDelegate, excelProcessId, 0, SetWinEventHookFlags.WINEVENT_OUTOFCONTEXT);
@@ -148,7 +147,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Must run on the same thread that InstallWinEventHook ran on
-        private void UninstallWinEventHook(object _)
+        void UninstallWinEventHook(object _)
         {
             if (_hWinEventHook == IntPtr.Zero)
             {
@@ -159,7 +158,7 @@ namespace ExcelDna.IntelliSense
             try
             {
                 Logger.WinEvents.Info($"UnhookWinEvent called on thread {Thread.CurrentThread.ManagedThreadId}");
-                var result = UnhookWinEvent(_hWinEventHook);
+                bool result = UnhookWinEvent(_hWinEventHook);
                 if (!result)
                 {
                     // GetLastError?
@@ -181,30 +180,24 @@ namespace ExcelDna.IntelliSense
         }
 
         // This runs on the Excel main thread (usually, not always) - get off quickly
-        private void HandleWinEvent(IntPtr hWinEventHook, WinEvent eventType, IntPtr hWnd,
+        void HandleWinEvent(IntPtr hWinEventHook, WinEvent eventType, IntPtr hWnd,
                             WinEventObjectId idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
         {
             // Debug.Print($"++++++++++++++ WinEvent Received: {eventType} on thread {Thread.CurrentThread.ManagedThreadId} from thread {dwEventThread} +++++++++++++++++++++++++++");
             try
             {
                 if (_hWndFilterOrZero != IntPtr.Zero && hWnd != _hWndFilterOrZero)
-                {
                     return;
-                }
 
                 if (!IsSupportedWinEvent(eventType) || idObject == WinEventObjectId.OBJID_CURSOR || hWnd == IntPtr.Zero)
-                {
                     return;
-                }
 
                 // Moving the GetClassName call here where the main thread is running.
                 var windowClassName = Win32Helper.GetClassName(hWnd);
 
                 if (string.IsNullOrEmpty(windowClassName))
-                {
                     return;
-                }
-
+                    
                 // CONSIDER: We might add some filtering here... maybe only interested in some of the window / event combinations
                 _syncContextAuto.Post(OnWinEventReceived, new WinEventArgs(eventType, hWnd, windowClassName, idObject, idChild, dwEventThread, dwmsEventTime));
             }
@@ -215,7 +208,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // A quick filter that runs on the Excel main thread (or other thread handling the WinEvent)
-        private bool IsSupportedWinEvent(WinEvent winEvent)
+        bool IsSupportedWinEvent(WinEvent winEvent)
         {
             return winEvent == WinEvent.EVENT_OBJECT_CREATE ||
                    // winEvent == WinEvent.EVENT_OBJECT_DESTROY ||  // Stopped watching for this, because we can't route using the ClassName and don't really need anymore
@@ -229,13 +222,11 @@ namespace ExcelDna.IntelliSense
 
         // Runs on our Automation thread (via SyncContext passed into the constructor)
         // CONSIDER: Performance impact of logging (including GetClassName) here 
-        private void OnWinEventReceived(object winEventArgsObj)
+        void OnWinEventReceived(object winEventArgsObj)
         {
             var winEventArgs = (WinEventArgs)winEventArgsObj;
             if (winEventArgs.ObjectId == WinEventObjectId.OBJID_CURSOR)
-            {
                 return;
-            }
 #if DEBUG
             Logger.WinEvents.Verbose($"{winEventArgs.EventType} - Window {winEventArgs.WindowHandle:X} {(winEventArgs.WindowHandle != IntPtr.Zero ? Win32Helper.GetClassName(winEventArgs.WindowHandle) : "")} - Object/Child {winEventArgs.ObjectId} / {winEventArgs.ChildId} - Thread {winEventArgs.EventThreadId} at {winEventArgs.EventTimeMs}");
 #endif

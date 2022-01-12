@@ -14,7 +14,7 @@ namespace ExcelDna.IntelliSense
     // NOTE: More ideas on tracking the current topmost window (using Application events): http://www.jkp-ads.com/Articles/keepuserformontop02.asp
 
     // All the code in this class runs on the Automation thread, including events we handle from the WinEventHook.
-    internal class WindowWatcher : IDisposable
+    class WindowWatcher : IDisposable
     {
         public class WindowChangedEventArgs : EventArgs
         {
@@ -95,25 +95,25 @@ namespace ExcelDna.IntelliSense
 
 
         }
+        
+        const string _mainWindowClass = "XLMAIN";
+        const string _sheetWindowClass = "EXCEL7";  // This is the sheet portion (not top level) - we get some notifications from here?
+        const string _formulaBarClass = "EXCEL<";
+        const string _inCellEditClass = "EXCEL6";
+        const string _popupListClass = "__XLACOOUTER";
+        const string _excelToolTipClass = "XLToolTip";
+        const string _nuiDialogClass = "NUIDialog";
+        const string _selectDataSourceTitle = "Select Data Source";     // TODO: How does localization work?
 
-        private const string _mainWindowClass = "XLMAIN";
-        private const string _sheetWindowClass = "EXCEL7";  // This is the sheet portion (not top level) - we get some notifications from here?
-        private const string _formulaBarClass = "EXCEL<";
-        private const string _inCellEditClass = "EXCEL6";
-        private const string _popupListClass = "__XLACOOUTER";
-        private const string _excelToolTipClass = "XLToolTip";
-        private const string _nuiDialogClass = "NUIDialog";
-        private const string _selectDataSourceTitle = "Select Data Source";     // TODO: How does localization work?
-
-        private WinEventHook _windowStateChangeHook;
+        WinEventHook _windowStateChangeHook;
 
         // These track keyboard focus for Windows in the Excel process
         // Used to synthesize the 'Unfocus' change events
-        private IntPtr _focusedWindowHandle;
-        private string _focusedWindowClassName;
+        IntPtr _focusedWindowHandle;
+        string _focusedWindowClassName;
 
-        //        public IntPtr SelectDataSourceWindow { get; private set; }
-        //        public bool IsSelectDataSourceWindowVisible { get; private set; }
+//        public IntPtr SelectDataSourceWindow { get; private set; }
+//        public bool IsSelectDataSourceWindowVisible { get; private set; }
 
         // NOTE: The WindowWatcher raises all events on our Automation thread (via syncContextAuto passed into the constructor).
         // Raised for every WinEvent related to window of the relevant class
@@ -122,7 +122,7 @@ namespace ExcelDna.IntelliSense
         public event EventHandler<WindowChangedEventArgs> PopupListWindowChanged;
         public event EventHandler<WindowChangedEventArgs> ExcelToolTipWindowChanged;
         public event EventHandler FormulaEditLocationChanged;
-        //        public event EventHandler<WindowChangedEventArgs> SelectDataSourceWindowChanged;
+//        public event EventHandler<WindowChangedEventArgs> SelectDataSourceWindowChanged;
 
         public WindowWatcher(SynchronizationContext syncContextAuto, SynchronizationContext syncContextMain)
         {
@@ -143,25 +143,21 @@ namespace ExcelDna.IntelliSense
         public void TryInitialize()
         {
             Debug.Print("### WindowWatcher TryInitialize on thread: " + Thread.CurrentThread.ManagedThreadId);
-            IntPtr focusedWindowHandle = Win32Helper.GetFocusedWindowHandle();
+            var focusedWindowHandle = Win32Helper.GetFocusedWindowHandle();
             string className = null;
             if (focusedWindowHandle != IntPtr.Zero)
-            {
                 className = Win32Helper.GetClassName(focusedWindowHandle);
-            }
 
             UpdateFocus(focusedWindowHandle, className);
         }
 
-        private bool UpdateFocus(IntPtr windowHandle, string windowClassName)
+        bool UpdateFocus(IntPtr windowHandle, string windowClassName)
         {
             if (windowHandle == _focusedWindowHandle && _focusedWindowClassName == windowClassName)
-            {
-                return false;
-            }
+                    return false;
 
             // We see a change in the WindowClassName often - handle that as a focus change too
-
+ 
             Debug.Assert(_focusedWindowClassName != _excelToolTipClass); // We don't expect the ToolTip to ever get the focus
             Logger.WindowWatcher.Verbose($"Focus lost by {_focusedWindowHandle} ({_focusedWindowClassName})");
             // It has changed - raise an event for the old window
@@ -195,7 +191,7 @@ namespace ExcelDna.IntelliSense
         //           but since WinEvents have no hwnd filter, UIAutomation events might be more efficient.
         // CONSIDER: Performance optimisation would keep a list of window handles we know about, preventing the class name check every time
         // NOTE: We are not getting OBJID_CURSOR events here - that means we expect to have a valid WindowHandle except when destroyed
-        private void _windowStateChangeHook_WinEventReceived(object sender, WinEventHook.WinEventArgs e)
+        void _windowStateChangeHook_WinEventReceived(object sender, WinEventHook.WinEventArgs e)
         {
             if (e.WindowHandle == IntPtr.Zero)
             {
@@ -232,7 +228,7 @@ namespace ExcelDna.IntelliSense
                     break;
                 case _excelToolTipClass:
                     ExcelToolTipWindowChanged?.Invoke(this, new WindowChangedEventArgs(e.WindowHandle, e.EventType, e.ObjectId));
-                    break;
+                     break;
                 //case _nuiDialogClass:
                 //    // Debug.Print($"SelectDataSource {_selectDataSourceClass} Window update: {e.WindowHandle:X}, EventType: {e.EventType}, idChild: {e.ChildId}");
                 //    if (e.EventType == WinEventHook.WinEvent.EVENT_OBJECT_CREATE)
@@ -272,7 +268,10 @@ namespace ExcelDna.IntelliSense
 
         // Fired from the FormulaEditWatcher...
         // CONSIDER: We might restructure the location watching, so that it happens here, rather than in the FormulaEdit
-        internal void OnFormulaEditLocationChanged() => FormulaEditLocationChanged?.Invoke(this, EventArgs.Empty);
+        internal void OnFormulaEditLocationChanged()
+        {
+            FormulaEditLocationChanged?.Invoke(this, EventArgs.Empty);
+        }
 
         // Must run on the main thread
         public void Dispose()

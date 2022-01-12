@@ -11,14 +11,14 @@ namespace ExcelDna.IntelliSense
     // * the UIMonitor which monitors the state of Excel, including the current function prefix,
     // * the IntelliSenseDisplay which presents the pop-ups, and 
     // * the IntelliSenseProviders which figure out what information is available.
-    internal class IntelliSenseHelper : IDisposable
+    class IntelliSenseHelper : IDisposable
     {
-        private readonly SynchronizationContext _syncContextMain; // Main thread, not macro context
-        private readonly UIMonitor _uiMonitor;  // We want the UIMonitor here, because we might hook up other display enhancements
+        readonly SynchronizationContext _syncContextMain; // Main thread, not macro context
+        readonly UIMonitor _uiMonitor;  // We want the UIMonitor here, because we might hook up other display enhancements
 
         // These need to get combined into a UIEnhancement class ....
-        private readonly IntelliSenseDisplay _display;
-        private readonly List<IIntelliSenseProvider> _providers = new List<IIntelliSenseProvider>();
+        readonly IntelliSenseDisplay _display;
+        readonly List<IIntelliSenseProvider> _providers = new List<IIntelliSenseProvider>();
         // TODO: Others
 
         public IntelliSenseHelper()
@@ -37,9 +37,9 @@ namespace ExcelDna.IntelliSense
             Logger.Initialization.Verbose("IntelliSenseHelper Constructor End");
         }
 
-        private void RegisterIntellisense()
+        void RegisterIntellisense()
         {
-            foreach (IIntelliSenseProvider provider in _providers)
+            foreach (var provider in _providers)
             {
                 provider.Invalidate += Provider_Invalidate;
                 provider.Initialize();
@@ -49,23 +49,26 @@ namespace ExcelDna.IntelliSense
 
         // We need to call Refresh on the main thread in a macro context,
         // and then GetFunctionInfos() to update the Display
-        private void Provider_Invalidate(object sender, EventArgs e) => RefreshProvider(sender);
+        void Provider_Invalidate(object sender, EventArgs e)
+        {
+            RefreshProvider(sender);
+        }
 
         // Must be called on the main thread, in a macro context
         // TODO: Still not sure how to delete / unregister...
-        private void RefreshProvider(object providerObj)
+        void RefreshProvider(object providerObj)
         {
             Debug.Assert(Thread.CurrentThread.ManagedThreadId == 1);
             Logger.Provider.Verbose($"IntelliSenseHelper.RefreshProvider - Begin Refresh for {providerObj.GetType().Name}");
-            var provider = (IIntelliSenseProvider)providerObj;
+            IIntelliSenseProvider provider = (IIntelliSenseProvider)providerObj;
             provider.Refresh();
             UpdateDisplay(provider);
             Logger.Provider.Verbose($"IntelliSenseHelper.RefreshProvider - End");
         }
 
-        private void UpdateDisplay(IIntelliSenseProvider provider)
+        void UpdateDisplay(IIntelliSenseProvider provider)
         {
-            IList<FunctionInfo> functionInfos = provider.GetFunctionInfos();
+            var functionInfos = provider.GetFunctionInfos();
             _display.UpdateFunctionInfos(functionInfos);
         }
 
@@ -73,7 +76,7 @@ namespace ExcelDna.IntelliSense
         // TODO: Still not sure how to delete / unregister...
         internal void RefreshProviders()
         {
-            foreach (IIntelliSenseProvider provider in _providers)
+            foreach (var provider in _providers)
             {
                 RefreshProvider(provider);
             }
@@ -85,7 +88,7 @@ namespace ExcelDna.IntelliSense
             Debug.Assert(Thread.CurrentThread.ManagedThreadId == 1);
             Logger.Initialization.Verbose("IntelliSenseHelper Dispose Start");
 
-            foreach (IIntelliSenseProvider provider in _providers)
+            foreach (var provider in _providers)
             {
                 provider.Dispose();
             }

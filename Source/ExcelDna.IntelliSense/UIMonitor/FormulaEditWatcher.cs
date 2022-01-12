@@ -11,9 +11,9 @@ namespace ExcelDna.IntelliSense
     // We want to know whether to show the function entry help
     // For now we ignore whether another ToolTip is being shown, and just use the formula edit state.
     // CONSIDER: Should we watch the in-cell edit box and the formula edit control separately?
-    internal class FormulaEditWatcher : IDisposable
+    class FormulaEditWatcher : IDisposable
     {
-        private enum FormulaEditFocus
+        enum FormulaEditFocus
         {
             None = 0,
             FormulaBar = 1,
@@ -39,15 +39,15 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        private static readonly StateChangeEventArgs s_stateChangeMultiple = new StateChangeEventArgs(StateChangeType.Multiple);
-        private static readonly StateChangeEventArgs s_stateChangeMove = new StateChangeEventArgs(StateChangeType.Move);
-        private static readonly StateChangeEventArgs s_stateChangeTextChange = new StateChangeEventArgs(StateChangeType.TextChange);
+        readonly static StateChangeEventArgs s_stateChangeMultiple = new StateChangeEventArgs(StateChangeType.Multiple);
+        readonly static StateChangeEventArgs s_stateChangeMove = new StateChangeEventArgs(StateChangeType.Move);
+        readonly static StateChangeEventArgs s_stateChangeTextChange = new StateChangeEventArgs(StateChangeType.TextChange);
 
         // NOTE: Our event will always be raised on the _syncContextAuto thread (CONSIDER: Does this help?)
         public event EventHandler<StateChangeEventArgs>? StateChanged;
 
         public bool IsEditingFormula { get; set; }
-
+        
         public string? CurrentPrefix { get; set; }    // Null if not editing
 
         // We don't really care whether it is the formula bar or in-cell, 
@@ -72,16 +72,19 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        private readonly SynchronizationContext _syncContextAuto;
-        private readonly SynchronizationContext _syncContextMain;
-        private readonly WindowWatcher _windowWatcher;          // Passed in
+        readonly SynchronizationContext _syncContextAuto;
+        readonly SynchronizationContext _syncContextMain;
 
-        private WindowLocationWatcher? _windowLocationWatcher;  // Managed here
-        private readonly RenewableDelayExecutor _updateEditStateAfterTimeout;
-        private IntPtr _hwndFormulaBar;
-        private IntPtr _hwndInCellEdit;
-        private FormulaEditFocus _formulaEditFocus;
-        private const int DelayBeforeStateUpdateMilliseconds = 100;
+        readonly WindowWatcher _windowWatcher;          // Passed in
+        
+        WindowLocationWatcher? _windowLocationWatcher;  // Managed here
+        readonly RenewableDelayExecutor _updateEditStateAfterTimeout;
+
+        IntPtr _hwndFormulaBar;
+        IntPtr _hwndInCellEdit;
+        FormulaEditFocus _formulaEditFocus;
+
+        const int DelayBeforeStateUpdateMilliseconds = 100;
 
         public FormulaEditWatcher(WindowWatcher windowWatcher, SynchronizationContext syncContextAuto, SynchronizationContext syncContextMain)
         {
@@ -94,7 +97,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on the Automation thread
-        private void _windowWatcher_FormulaBarWindowChanged(object sender, WindowWatcher.WindowChangedEventArgs e)
+        void _windowWatcher_FormulaBarWindowChanged(object sender, WindowWatcher.WindowChangedEventArgs e)
         {
             switch (e.Type)
             {
@@ -166,7 +169,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on the Automation thread
-        private void _windowWatcher_InCellEditWindowChanged(object sender, WindowWatcher.WindowChangedEventArgs e)
+        void _windowWatcher_InCellEditWindowChanged(object sender, WindowWatcher.WindowChangedEventArgs e)
         {
             // Debug.Print($"\r\n%%% InCellEditWindowChanged: {e.ObjectId} - {e.Type}\r\n");
             switch (e.Type)
@@ -242,7 +245,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on the automation thread
-        private void SetEditWindow(IntPtr newWindowHandle, ref IntPtr hwnd)
+        void SetEditWindow(IntPtr newWindowHandle, ref IntPtr hwnd)
         {
             if (hwnd != newWindowHandle)
             {
@@ -279,7 +282,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on our Automation thread
-        private void InstallLocationMonitor(IntPtr hWnd)
+        void InstallLocationMonitor(IntPtr hWnd)
         {
             UninstallLocationMonitor();
             _windowLocationWatcher = new WindowLocationWatcher(hWnd, _syncContextAuto, _syncContextMain);
@@ -287,10 +290,10 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on our Automation thread
-        private void UninstallLocationMonitor()
+        void UninstallLocationMonitor()
         {
             WindowLocationWatcher? tempWatcher = Interlocked.Exchange(ref _windowLocationWatcher, null);
-
+            
             if (tempWatcher != null)
             {
                 _syncContextMain.Post(disp => ((IDisposable)disp).Dispose(), tempWatcher);
@@ -298,7 +301,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on our Automation thread
-        private void _windowLocationWatcher_LocationChanged(object sender, EventArgs e)
+        void _windowLocationWatcher_LocationChanged(object sender, EventArgs e)
         {
             UpdateEditState(moveOnly: true);
             _windowWatcher.OnFormulaEditLocationChanged();
@@ -313,7 +316,7 @@ namespace ExcelDna.IntelliSense
         //    UpdateFormula(textChangedOnly: true);
         //}
 
-        private void UpdateEditState(bool moveOnly = false)
+        void UpdateEditState(bool moveOnly = false)
         {
             // Switches to our Main UI thread, updates current state and raises StateChanged event
             _syncContextMain.Post(_ =>
@@ -322,14 +325,14 @@ namespace ExcelDna.IntelliSense
             }, null);
         }
 
-        private void UpdateEditStateImpl(bool moveOnly = false)
+        void UpdateEditStateImpl(bool moveOnly = false)
         {
             Logger.WindowWatcher.Verbose($"> FormulaEdit UpdateEditState - Thread {Thread.CurrentThread.ManagedThreadId}");
             Logger.WindowWatcher.Verbose($"FormulaEdit UpdateEditState - Focus: {_formulaEditFocus} Window: {(_formulaEditFocus == FormulaEditFocus.FormulaBar ? _hwndFormulaBar : _hwndInCellEdit)}");
-
+            
             IntPtr hwnd = IntPtr.Zero;
-
-            var prefixChanged = false;
+            
+            bool prefixChanged = false;
 
             if (_formulaEditFocus == FormulaEditFocus.FormulaBar)
             {
@@ -343,14 +346,12 @@ namespace ExcelDna.IntelliSense
             {
                 // Neither have the focus, so we don't update anything
                 Logger.WindowWatcher.Verbose("FormulaEdit UpdateEditState End formula editing");
-
+                
                 CurrentPrefix = null;
 
                 if (IsEditingFormula)
-                {
                     UninstallLocationMonitor();
-                }
-
+                
                 IsEditingFormula = false;
                 prefixChanged = true;
 
@@ -391,7 +392,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // We ensure that our event is raised on the Automation thread .. (Eases concurrency issues in handling it, though it will get passed on to the main thread...)
-        private void OnStateChanged(StateChangeType stateChangeType)
+        void OnStateChanged(StateChangeType stateChangeType)
         {
             StateChangeEventArgs stateChangedArgs;
             switch (stateChangeType)

@@ -11,7 +11,7 @@ namespace ExcelDna.IntelliSense
     //
     // One shortcoming of our representation is that we don't track a second selection list and matching ExcelToolTip 
     // that might pop up for an argument, e.g. VLOOKUP's TRUE/FALSE.
-    internal abstract class UIState
+    abstract class UIState
     {
         public static UIState ReadyState = new Ready();
         public class Ready : UIState { }
@@ -27,9 +27,9 @@ namespace ExcelDna.IntelliSense
                 return new FormulaEdit
                 {
                     FormulaEditWindow = newFormulaEditWindow,
-                    FormulaPrefix = FormulaPrefix,
-                    EditWindowBounds = EditWindowBounds,
-                    ExcelToolTipWindow = ExcelToolTipWindow
+                    FormulaPrefix = this.FormulaPrefix,
+                    EditWindowBounds = this.EditWindowBounds,
+                    ExcelToolTipWindow = this.ExcelToolTipWindow
                 };
             }
 
@@ -37,10 +37,10 @@ namespace ExcelDna.IntelliSense
             {
                 return new FormulaEdit
                 {
-                    FormulaEditWindow = FormulaEditWindow,
+                    FormulaEditWindow = this.FormulaEditWindow,
                     FormulaPrefix = newFormulaPrefix ?? "",
-                    EditWindowBounds = EditWindowBounds,
-                    ExcelToolTipWindow = ExcelToolTipWindow
+                    EditWindowBounds = this.EditWindowBounds,
+                    ExcelToolTipWindow = this.ExcelToolTipWindow
                 };
             }
 
@@ -48,10 +48,10 @@ namespace ExcelDna.IntelliSense
             {
                 return new FormulaEdit
                 {
-                    FormulaEditWindow = FormulaEditWindow,
-                    FormulaPrefix = FormulaPrefix,
+                    FormulaEditWindow = this.FormulaEditWindow,
+                    FormulaPrefix = this.FormulaPrefix,
                     EditWindowBounds = newEditWindowBounds,
-                    ExcelToolTipWindow = ExcelToolTipWindow
+                    ExcelToolTipWindow = this.ExcelToolTipWindow
                 };
             }
 
@@ -59,9 +59,9 @@ namespace ExcelDna.IntelliSense
             {
                 return new FormulaEdit
                 {
-                    FormulaEditWindow = FormulaEditWindow,
-                    FormulaPrefix = FormulaPrefix,
-                    EditWindowBounds = EditWindowBounds,
+                    FormulaEditWindow = this.FormulaEditWindow,
+                    FormulaPrefix = this.FormulaPrefix,
+                    EditWindowBounds = this.EditWindowBounds,
                     ExcelToolTipWindow = newExcelToolTipWindow
                 };
             }
@@ -80,14 +80,14 @@ namespace ExcelDna.IntelliSense
                 return new FunctionList
                 {
                     FormulaEditWindow = newFormulaEditWindow,
-                    FormulaPrefix = FormulaPrefix,
-                    EditWindowBounds = EditWindowBounds,
-                    ExcelToolTipWindow = ExcelToolTipWindow,
+                    FormulaPrefix = this.FormulaPrefix,
+                    EditWindowBounds = this.EditWindowBounds,
+                    ExcelToolTipWindow = this.ExcelToolTipWindow,
 
-                    FunctionListWindow = FunctionListWindow,
-                    SelectedItemText = SelectedItemText,
-                    SelectedItemBounds = SelectedItemBounds,
-                    FunctionListBounds = FunctionListBounds
+                    FunctionListWindow = this.FunctionListWindow,
+                    SelectedItemText = this.SelectedItemText,
+                    SelectedItemBounds = this.SelectedItemBounds,
+                    FunctionListBounds = this.FunctionListBounds
                 };
             }
 
@@ -95,15 +95,15 @@ namespace ExcelDna.IntelliSense
             {
                 return new FunctionList
                 {
-                    FormulaEditWindow = FormulaEditWindow,
-                    FormulaPrefix = FormulaPrefix,
-                    EditWindowBounds = EditWindowBounds,
-                    ExcelToolTipWindow = ExcelToolTipWindow,
+                    FormulaEditWindow = this.FormulaEditWindow,
+                    FormulaPrefix = this.FormulaPrefix,
+                    EditWindowBounds = this.EditWindowBounds,
+                    ExcelToolTipWindow = this.ExcelToolTipWindow,
 
                     FunctionListWindow = newFunctionListWindow,
-                    SelectedItemText = SelectedItemText,
-                    SelectedItemBounds = SelectedItemBounds,
-                    FunctionListBounds = FunctionListBounds
+                    SelectedItemText = this.SelectedItemText,
+                    SelectedItemBounds = this.SelectedItemBounds,
+                    FunctionListBounds = this.FunctionListBounds
                 };
             }
 
@@ -111,15 +111,15 @@ namespace ExcelDna.IntelliSense
             {
                 return new FunctionList
                 {
-                    FormulaEditWindow = FormulaEditWindow,
+                    FormulaEditWindow = this.FormulaEditWindow,
                     FormulaPrefix = newFormulaPrefix ?? "",
-                    EditWindowBounds = EditWindowBounds,
-                    ExcelToolTipWindow = ExcelToolTipWindow,
+                    EditWindowBounds = this.EditWindowBounds,
+                    ExcelToolTipWindow = this.ExcelToolTipWindow,
 
-                    FunctionListWindow = FunctionListWindow,
-                    SelectedItemText = SelectedItemText,
-                    SelectedItemBounds = SelectedItemBounds,
-                    FunctionListBounds = FunctionListBounds
+                    FunctionListWindow = this.FunctionListWindow,
+                    SelectedItemText = this.SelectedItemText,
+                    SelectedItemBounds = this.SelectedItemBounds,
+                    FunctionListBounds = this.FunctionListBounds
                 };
             }
 
@@ -127,15 +127,15 @@ namespace ExcelDna.IntelliSense
             {
                 return new FunctionList
                 {
-                    FormulaEditWindow = FormulaEditWindow,
-                    FormulaPrefix = FormulaPrefix,
+                    FormulaEditWindow = this.FormulaEditWindow,
+                    FormulaPrefix = this.FormulaPrefix,
                     EditWindowBounds = newEditWindowBounds,
-                    ExcelToolTipWindow = ExcelToolTipWindow,
+                    ExcelToolTipWindow = this.ExcelToolTipWindow,
 
-                    FunctionListWindow = FunctionListWindow,
-                    SelectedItemText = SelectedItemText,
-                    SelectedItemBounds = SelectedItemBounds,
-                    FunctionListBounds = FunctionListBounds
+                    FunctionListWindow = this.FunctionListWindow,
+                    SelectedItemText = this.SelectedItemText,
+                    SelectedItemBounds = this.SelectedItemBounds,
+                    FunctionListBounds = this.FunctionListBounds
                 };
             }
 
@@ -143,15 +143,15 @@ namespace ExcelDna.IntelliSense
             {
                 return new FunctionList
                 {
-                    FormulaEditWindow = FormulaEditWindow,
-                    FormulaPrefix = FormulaPrefix,
-                    EditWindowBounds = EditWindowBounds,
+                    FormulaEditWindow = this.FormulaEditWindow,
+                    FormulaPrefix = this.FormulaPrefix,
+                    EditWindowBounds = this.EditWindowBounds,
                     ExcelToolTipWindow = newExcelToolTipWindow,
 
-                    FunctionListWindow = FunctionListWindow,
-                    SelectedItemText = SelectedItemText,
-                    SelectedItemBounds = SelectedItemBounds,
-                    FunctionListBounds = FunctionListBounds
+                    FunctionListWindow = this.FunctionListWindow,
+                    SelectedItemText = this.SelectedItemText,
+                    SelectedItemBounds = this.SelectedItemBounds,
+                    FunctionListBounds = this.FunctionListBounds
                 };
             }
 
@@ -159,12 +159,12 @@ namespace ExcelDna.IntelliSense
             {
                 return new FunctionList
                 {
-                    FormulaEditWindow = FormulaEditWindow,
-                    FormulaPrefix = FormulaPrefix,
-                    EditWindowBounds = EditWindowBounds,
-                    ExcelToolTipWindow = ExcelToolTipWindow,
+                    FormulaEditWindow = this.FormulaEditWindow,
+                    FormulaPrefix = this.FormulaPrefix,
+                    EditWindowBounds = this.EditWindowBounds,
+                    ExcelToolTipWindow = this.ExcelToolTipWindow,
 
-                    FunctionListWindow = FunctionListWindow,
+                    FunctionListWindow = this.FunctionListWindow,
                     FunctionListBounds = listBounds,
                     SelectedItemText = selectedItemText,
                     SelectedItemBounds = selectedItemBounds,
@@ -173,13 +173,13 @@ namespace ExcelDna.IntelliSense
 
             internal FormulaEdit AsFormulaEdit()
             {
-                return new FormulaEdit
-                {
-                    FormulaEditWindow = FormulaEditWindow,
-                    FormulaPrefix = FormulaPrefix,
-                    EditWindowBounds = EditWindowBounds,
-                    ExcelToolTipWindow = ExcelToolTipWindow,
-                };
+                 return new FormulaEdit
+                    {
+                        FormulaEditWindow = FormulaEditWindow,
+                        FormulaPrefix = FormulaPrefix,
+                        EditWindowBounds = EditWindowBounds,
+                        ExcelToolTipWindow = ExcelToolTipWindow,
+                    };
             }
         }
 
@@ -189,22 +189,24 @@ namespace ExcelDna.IntelliSense
             public IntPtr SelectDataSourceWindow = IntPtr.Zero;
         }
 
-        public override string ToString() =>
-#if DEBUG
-                $"{GetType().Name}{((this is Ready) ? "" : "\r\n")}{string.Join("\r\n", GetType().GetFields().Select(fld => $"\t{fld.Name}: {fld.GetValue(this)}"))}";
-#else
+        public override string ToString()
+        {
+            #if DEBUG
+                return $"{GetType().Name}{((this is Ready) ? "" : "\r\n")}{string.Join("\r\n", GetType().GetFields().Select(fld => $"\t{fld.Name}: {fld.GetValue(this)}"))}";
+            #else
                 return base.ToString();
-#endif
-
+            #endif
+        }
 
         // TODO: Figure out what to do with this
-        public string LogString() =>
-#if DEBUG
-                $"{GetType().Name}{((this is Ready) ? "" : "\t")}{string.Join("\t", GetType().GetFields().Select(fld => $"\t{fld.Name}: {fld.GetValue(this)}"))}";
-#else
+        public string LogString()
+        {
+            #if DEBUG
+                return $"{GetType().Name}{((this is Ready) ? "" : "\t")}{string.Join("\t", GetType().GetFields().Select(fld => $"\t{fld.Name}: {fld.GetValue(this)}"))}";
+            #else
                 return ToString();
-#endif
-
+            #endif
+        }
 
         // This is the universal update check
         // When an event knows exactly what changed (e.g. Text or SelectedItem), it need not call this
@@ -220,7 +222,7 @@ namespace ExcelDna.IntelliSense
                 else if (newState is FunctionList functionList)
                 {
                     // We generate an intermediate state (!?)
-                    FormulaEdit formulaEdit = functionList.AsFormulaEdit();
+                    var formulaEdit = functionList.AsFormulaEdit();
                     yield return new UIStateUpdate(oldState, formulaEdit, UIStateUpdate.UpdateType.FormulaEditStart);
                     yield return new UIStateUpdate(formulaEdit, functionList, UIStateUpdate.UpdateType.FunctionListShow);
                 }
@@ -231,11 +233,8 @@ namespace ExcelDna.IntelliSense
                 else if (newState is SelectDataSource)
                 {
                     // Go to Ready then to new state
-                    foreach (UIStateUpdate update in GetUpdates(oldState, ReadyState))
-                    {
+                    foreach (var update in GetUpdates(oldState, ReadyState))
                         yield return update;
-                    }
-
                     yield return new UIStateUpdate(ReadyState, newState, UIStateUpdate.UpdateType.SelectDataSourceShow);
                 }
             }
@@ -244,35 +243,28 @@ namespace ExcelDna.IntelliSense
                 if (newState is Ready)
                 {
                     // We generate an intermediate state (!?)
-                    FormulaEdit formulaEdit = oldStateFl.AsFormulaEdit();
+                    var formulaEdit = oldStateFl.AsFormulaEdit();
                     yield return new UIStateUpdate(oldStateFl, formulaEdit, UIStateUpdate.UpdateType.FunctionListHide);
                     yield return new UIStateUpdate(formulaEdit, newState, UIStateUpdate.UpdateType.FormulaEditEnd);
                 }
                 else if (newState is FunctionList newStateFl)
                 {
-                    foreach (UIStateUpdate update in GetUpdates(oldStateFl, newStateFl))
-                    {
+                    foreach (var update in GetUpdates(oldStateFl, newStateFl))
                         yield return update;
-                    }
                 }
                 else if (newState is FormulaEdit newStateFe) // but not FunctionList
                 {
-                    FormulaEdit oldStateFE = oldStateFl.AsFormulaEdit();
+                    var oldStateFE = oldStateFl.AsFormulaEdit();
                     yield return new UIStateUpdate(oldStateFl, oldStateFE, UIStateUpdate.UpdateType.FunctionListHide);
 
-                    foreach (UIStateUpdate update in GetUpdates(oldStateFE, newStateFe))
-                    {
+                    foreach (var update in GetUpdates(oldStateFE, newStateFe))
                         yield return update;
-                    }
                 }
                 else if (newState is SelectDataSource)
                 {
                     // Go to Ready then to new state
-                    foreach (UIStateUpdate update in GetUpdates(oldStateFl, ReadyState))
-                    {
+                    foreach (var update in GetUpdates(oldStateFl, ReadyState))
                         yield return update;
-                    }
-
                     yield return new UIStateUpdate(ReadyState, newState, UIStateUpdate.UpdateType.SelectDataSourceShow);
                 }
             }
@@ -285,30 +277,23 @@ namespace ExcelDna.IntelliSense
                 else if (newState is FunctionList list)
                 {
                     // First process any FormulaEdit changes
-                    FormulaEdit newStateFE = list.AsFormulaEdit();
-                    foreach (UIStateUpdate update in GetUpdates(oldStateFe, newStateFE))
-                    {
+                    var newStateFE = list.AsFormulaEdit();
+                    foreach (var update in GetUpdates(oldStateFe, newStateFE))
                         yield return update;
-                    }
 
                     yield return new UIStateUpdate(newStateFE, list, UIStateUpdate.UpdateType.FunctionListShow);
                 }
                 else if (newState is FormulaEdit newStateFe) // but not FunctionList
                 {
-                    FormulaEdit oldStateFE = oldStateFe;
-                    foreach (UIStateUpdate update in GetUpdates(oldStateFE, newStateFe))
-                    {
+                    var oldStateFE = oldStateFe;
+                    foreach (var update in GetUpdates(oldStateFE, newStateFe))
                         yield return update;
-                    }
                 }
                 else if (newState is SelectDataSource)
                 {
                     // Go to Ready then to new state
-                    foreach (UIStateUpdate update in GetUpdates(oldStateFe, ReadyState))
-                    {
+                    foreach (var update in GetUpdates(oldStateFe, ReadyState))
                         yield return update;
-                    }
-
                     yield return new UIStateUpdate(ReadyState, newState, UIStateUpdate.UpdateType.SelectDataSourceShow);
                 }
             }
@@ -321,41 +306,37 @@ namespace ExcelDna.IntelliSense
                 else if (newState is SelectDataSource newStateSds)
                 {
                     if (oldStateSds.SelectDataSourceWindow != newStateSds.SelectDataSourceWindow)
-                    {
                         yield return new UIStateUpdate(oldStateSds, newStateSds, UIStateUpdate.UpdateType.SelectDataSourceWindowChange);
-                    }
                 }
                 else
                 {
                     // Go to Ready, then to new state
                     yield return new UIStateUpdate(oldStateSds, ReadyState, UIStateUpdate.UpdateType.SelectDataSourceHide);
-                    foreach (UIStateUpdate update in GetUpdates(ReadyState, newState))
-                    {
+                    foreach (var update in GetUpdates(ReadyState, newState))
                         yield return update;
-                    }
                 }
             }
         }
 
-        private static IEnumerable<UIStateUpdate> GetUpdates(FormulaEdit oldState, FormulaEdit newState)
+        static IEnumerable<UIStateUpdate> GetUpdates(FormulaEdit oldState, FormulaEdit newState)
         {
             // We generate intermediate states (!?)
             if (oldState.FormulaEditWindow != newState.FormulaEditWindow)
             {
                 // Always changes together with Move ...?
-                FormulaEdit tempState = oldState.WithFormulaEditWindow(newState.FormulaEditWindow);
+                var tempState = oldState.WithFormulaEditWindow(newState.FormulaEditWindow);
                 yield return new UIStateUpdate(oldState, tempState, UIStateUpdate.UpdateType.FormulaEditWindowChange);
                 oldState = tempState;
             }
             if (oldState.EditWindowBounds != newState.EditWindowBounds)
             {
-                FormulaEdit tempState = oldState.WithBounds(newState.EditWindowBounds);
+                var tempState = oldState.WithBounds(newState.EditWindowBounds);
                 yield return new UIStateUpdate(oldState, tempState, UIStateUpdate.UpdateType.FormulaEditMove);
                 oldState = tempState;
             }
             if (oldState.ExcelToolTipWindow != newState.ExcelToolTipWindow)
             {
-                FormulaEdit tempState = oldState.WithToolTipWindow(newState.ExcelToolTipWindow);
+                var tempState = oldState.WithToolTipWindow(newState.ExcelToolTipWindow);
                 yield return new UIStateUpdate(oldState, tempState, UIStateUpdate.UpdateType.FormulaEditExcelToolTipChange);
                 oldState = tempState;
             }
@@ -365,38 +346,38 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        private static IEnumerable<UIStateUpdate> GetUpdates(FunctionList oldState, FunctionList newState)
+        static IEnumerable<UIStateUpdate> GetUpdates(FunctionList oldState, FunctionList newState)
         {
             // We generate intermediate states (!?)
             if (oldState.FormulaEditWindow != newState.FormulaEditWindow)
             {
                 // Always changes together with Move ...?
-                FormulaEdit tempState = oldState.WithFormulaEditWindow(newState.FormulaEditWindow);
+                var tempState = oldState.WithFormulaEditWindow(newState.FormulaEditWindow);
                 yield return new UIStateUpdate(oldState, tempState, UIStateUpdate.UpdateType.FormulaEditWindowChange);
                 oldState = (FunctionList)tempState;
             }
             if (oldState.FunctionListWindow != newState.FunctionListWindow)
             {
                 Debug.Print(">>>>> Unexpected FunctionListWindowChange");  // Should never change???
-                FunctionList tempState = oldState.WithFunctionListWindow(newState.FunctionListWindow);
+                var tempState = oldState.WithFunctionListWindow(newState.FunctionListWindow);
                 yield return new UIStateUpdate(oldState, tempState, UIStateUpdate.UpdateType.FunctionListWindowChange);
                 oldState = tempState;
             }
             if (oldState.EditWindowBounds != newState.EditWindowBounds)
             {
-                FormulaEdit tempState = oldState.WithBounds(newState.EditWindowBounds);
+                var tempState = oldState.WithBounds(newState.EditWindowBounds);
                 yield return new UIStateUpdate(oldState, tempState, UIStateUpdate.UpdateType.FormulaEditMove);
                 oldState = (FunctionList)tempState;
             }
             if (oldState.ExcelToolTipWindow != newState.ExcelToolTipWindow)
             {
-                FormulaEdit tempState = oldState.WithToolTipWindow(newState.ExcelToolTipWindow);
+                var tempState = oldState.WithToolTipWindow(newState.ExcelToolTipWindow);
                 yield return new UIStateUpdate(oldState, tempState, UIStateUpdate.UpdateType.FormulaEditExcelToolTipChange);
                 oldState = (FunctionList)tempState;
             }
             if (oldState.FormulaPrefix != newState.FormulaPrefix)
             {
-                FormulaEdit tempState = oldState.WithFormulaPrefix(newState.FormulaPrefix);
+                var tempState = oldState.WithFormulaPrefix(newState.FormulaPrefix);
                 yield return new UIStateUpdate(oldState, tempState, UIStateUpdate.UpdateType.FormulaEditTextChange);
                 oldState = (FunctionList)tempState;
             }
@@ -409,29 +390,29 @@ namespace ExcelDna.IntelliSense
         }
     }
 
-    internal class UIStateUpdate : EventArgs
+    class UIStateUpdate : EventArgs
     {
         // We want to order and nest the updates to make them easy to respond to.
         // This means we have XXXStart, then stuff on the inside, then XXXEnd, always with correct nesting
         public enum UpdateType
         {
             FormulaEditStart,
-            // These three updates can happen while FunctionList is shown
-            FormulaEditMove,    // Includes moving between in-cell editing and the formula text box.
-            FormulaEditWindowChange, // Includes moving between in-cell editing and the formula text box.
-            FormulaEditTextChange,
-            FormulaEditExcelToolTipChange,
+                // These three updates can happen while FunctionList is shown
+                FormulaEditMove,    // Includes moving between in-cell editing and the formula text box.
+                FormulaEditWindowChange, // Includes moving between in-cell editing and the formula text box.
+                FormulaEditTextChange,
+                FormulaEditExcelToolTipChange,
 
-            FunctionListShow,
-            FunctionListMove,
-            FunctionListSelectedItemChange,
-            FunctionListWindowChange,
-            FunctionListHide,
+                FunctionListShow,
+                    FunctionListMove,
+                    FunctionListSelectedItemChange,
+                    FunctionListWindowChange,
+                FunctionListHide,
 
             FormulaEditEnd,
 
             SelectDataSourceShow,
-            SelectDataSourceWindowChange,
+                SelectDataSourceWindowChange,
             SelectDataSourceHide
         }
         public UIState OldState { get; }
@@ -448,10 +429,19 @@ namespace ExcelDna.IntelliSense
         }
 
         // Call this to allow the update event (on the main thread) to be raised
-        public void EnableUpdateEvent() => IsEnabled = true;
+        public void EnableUpdateEvent()
+        {
+            IsEnabled = true;
+        }
 
-        public override string ToString() => $"{Update}: {OldState} -> {NewState}";
+        public override string ToString()
+        {
+            return $"{Update}: {OldState} -> {NewState}";
+        }
 
-        public string LogString() => $"({Update.ToString()}): [{OldState.LogString()}] -> [{NewState.LogString()}]";
+        public string LogString()
+        {
+            return $"({Update.ToString()}): [{OldState.LogString()}] -> [{NewState.LogString()}]";
+        }
     }
 }

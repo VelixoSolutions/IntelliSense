@@ -8,12 +8,12 @@ namespace ExcelDna.IntelliSense
     // This code is from Stephen Toub's blog post on AsyncPump: http://blogs.msdn.com/b/pfxteam/archive/2012/01/20/10259049.aspx?PageIndex=2#comments
 
     /// <summary>Provides a SynchronizationContext that's single-threaded.</summary>
-    internal sealed class SingleThreadSynchronizationContext : SynchronizationContext
+    sealed class SingleThreadSynchronizationContext : SynchronizationContext
     {
         /// <summary>The queue of work items.</summary>
-        private readonly BlockingCollection<KeyValuePair<SendOrPostCallback, object>> _queue =
+        readonly BlockingCollection<KeyValuePair<SendOrPostCallback, object>> _queue =
             new BlockingCollection<KeyValuePair<SendOrPostCallback, object>>();
-        private int _threadId = 0;
+        int _threadId = 0;
 
         // /// <summary>The processing thread.</summary>
         // readonly Thread m_thread = Thread.CurrentThread;
@@ -23,11 +23,7 @@ namespace ExcelDna.IntelliSense
         /// <param name="state">The object passed to the delegate.</param>
         public override void Post(SendOrPostCallback d, object state)
         {
-            if (d == null)
-            {
-                throw new ArgumentNullException("d");
-            }
-
+            if (d == null) throw new ArgumentNullException("d");
             _queue.Add(new KeyValuePair<SendOrPostCallback, object>(d, state));
         }
 
@@ -40,7 +36,7 @@ namespace ExcelDna.IntelliSense
             }
 
             // We're being called on another thread...
-            var ev = new AutoResetEvent(false);
+            AutoResetEvent ev = new AutoResetEvent(false);
             Post(d, state);
             Post((object are) => ((AutoResetEvent)are).Set(), ev);
             ev.WaitOne();
@@ -51,7 +47,7 @@ namespace ExcelDna.IntelliSense
         {
             _threadId = Thread.CurrentThread.ManagedThreadId;
             Logger.Monitor.Info($"SingleThreadSynchronizationContext Running (Thread {_threadId})!");
-            foreach (KeyValuePair<SendOrPostCallback, object> workItem in _queue.GetConsumingEnumerable())
+            foreach (var workItem in _queue.GetConsumingEnumerable())
             {
                 try
                 {
@@ -67,6 +63,6 @@ namespace ExcelDna.IntelliSense
         }
 
         /// <summary>Notifies the context that no more work will arrive.</summary>
-        public void Complete() => _queue.CompleteAdding();
+        public void Complete() { _queue.CompleteAdding(); }
     }
 }

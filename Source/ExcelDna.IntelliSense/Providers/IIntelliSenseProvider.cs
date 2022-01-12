@@ -16,7 +16,7 @@ namespace ExcelDna.IntelliSense
     // Upon activation the server will call the provider to get the IntelliSense info.
     // The provider can also raise an Invalidate event, to prod the server into reloading the IntelliSense info for that provider
     // (a bit like the ribbon Invalidate works).
-
+ 
     // A major concern is the context in which the provider is called from the server.
     // We separate the Refresh call from the calls to get the info:
     // The Refresh calls are always in a macro context, from the main Excel thread and should be as fast as possible.
@@ -30,7 +30,7 @@ namespace ExcelDna.IntelliSense
     // TODO: We might relax the threading rules, to say that Refresh runs on the same thread as Invalidate 
     // TODO: We might get rid of Refresh (since that runs in the Invalidate context)
     // CONSIDER: The two providers have been refactored to work very similarly - maybe be can extract out a base class...
-    internal interface IIntelliSenseProvider : IDisposable
+    interface IIntelliSenseProvider : IDisposable
     {
         void Initialize();  // Executed in a macro context, on the main Excel thread
         void Refresh();     // Executed in a macro context, on the main Excel thread
@@ -38,7 +38,7 @@ namespace ExcelDna.IntelliSense
 
         IList<FunctionInfo> GetFunctionInfos(); // Called from a worker thread - no Excel or COM access (probably an MTA thread involved in the UI Automation)
     }
-
+    
     public class FunctionInfo
     {
         public class ArgumentInfo
@@ -64,9 +64,7 @@ namespace ExcelDna.IntelliSense
         internal static string ExpandHelpTopic(string path, string helpTopic)
         {
             if (string.IsNullOrEmpty(helpTopic))
-            {
                 return helpTopic;
-            }
 
             if (helpTopic.StartsWith("http://") || helpTopic.StartsWith("https://") || helpTopic.StartsWith("file://"))
             {

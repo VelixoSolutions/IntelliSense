@@ -11,32 +11,34 @@ namespace ExcelDna.IntelliSense
     // CONSIDER: Revisit UI Automation Threading: http://msdn.microsoft.com/en-us/library/windows/desktop/ee671692(v=vs.85).aspx
     //           And this threading sample using tlbimp version of Windows 7 native UIA: http://code.msdn.microsoft.com/Windows-7-UI-Automation-6390614a/sourcecode?fileId=21469&pathId=715901329
     // NOTE: TrackFocus example shows how to do a window 'natively'.
-    internal class IntelliSenseDisplay : IDisposable
+    class IntelliSenseDisplay : IDisposable
     {
 
         // SyncContextMain is running on the main Excel thread (not a 'macro' context, though)
         // Not sure we need this here... (the UIMonitor internally references it, and could raise the update events on the main thread...).
         // CONSIDER: We could send in the two filters for selecteditem and formula change, so that these checks don't run on the main thread...
 
-        private SynchronizationContext _syncContextMain;
-        private readonly UIMonitor _uiMonitor;
-        private readonly Dictionary<string, FunctionInfo> _functionInfoMap =
+        SynchronizationContext _syncContextMain;
+        readonly UIMonitor _uiMonitor;
+
+        readonly Dictionary<string, FunctionInfo> _functionInfoMap =
             new Dictionary<string, FunctionInfo>(StringComparer.CurrentCultureIgnoreCase);
 
         // Need to make these late ...?
-        private ToolTipForm _descriptionToolTip;
-        private ToolTipForm _argumentsToolTip;
-        private IntPtr _formulaEditWindow;
-        private IntPtr _functionListWindow;
-        private string _argumentSeparator = ", ";
-        private const int DescriptionLeftMargin = 3;
+        ToolTipForm _descriptionToolTip;
+        ToolTipForm _argumentsToolTip;
+        IntPtr _formulaEditWindow;
+        IntPtr _functionListWindow;
+        string _argumentSeparator = ", ";
+        
+        const int DescriptionLeftMargin = 3;
 
         public IntelliSenseDisplay(SynchronizationContext syncContextMain, UIMonitor uiMonitor)
         {
             // We expect this to be running in a macro context on the main Excel thread (ManagedThreadId = 1).
-#pragma warning disable CS0618 // Type or member is obsolete (GetCurrentThreadId) - But for debugging we want to monitor this anyway
+            #pragma warning disable CS0618 // Type or member is obsolete (GetCurrentThreadId) - But for debugging we want to monitor this anyway
             Debug.Print($"### Thread creating IntelliSenseDisplay: Managed {Thread.CurrentThread.ManagedThreadId}, Native {AppDomain.GetCurrentThreadId()}");
-#pragma warning restore CS0618 // Type or member is obsolete
+            #pragma warning restore CS0618 // Type or member is obsolete
 
             _syncContextMain = syncContextMain;
             _uiMonitor = uiMonitor;
@@ -45,15 +47,16 @@ namespace ExcelDna.IntelliSense
 
             InitializeOptions();
         }
-
+        
         // Runs on the main Excel thread in a macro context.
-        private void InitializeOptions()
+        void InitializeOptions()
         {
             Logger.Display.Verbose("InitializeOptions");
-            var listSeparator = ",";
-            var standardFontName = "Calibri";
-            var standardFontSize = 11.0;
-            if (XlCallInt.TryExcel(XlCallInt.xlfGetWorkspace, out var result, 37) == XlCallInt.XlReturn.XlReturnSuccess)
+            string listSeparator = ",";
+            string standardFontName = "Calibri";
+            double standardFontSize = 11.0;
+            object result;
+            if (XlCallInt.TryExcel(XlCallInt.xlfGetWorkspace, out result, 37) == XlCallInt.XlReturn.XlReturnSuccess)
             {
                 if (result is object[,] options)
                 {
@@ -82,7 +85,7 @@ namespace ExcelDna.IntelliSense
         // TODO: Still not sure how to delete / unregister...
         internal void UpdateFunctionInfos(IEnumerable<FunctionInfo> functionInfos)
         {
-            foreach (FunctionInfo fi in functionInfos)
+            foreach (var fi in functionInfos)
             {
                 RegisterFunctionInfo(fi);
             }
@@ -92,7 +95,7 @@ namespace ExcelDna.IntelliSense
         // This runs on the UIMonitor's automation thread
         // Allows us to enable the update to be raised on main thread
         // Might be raised on the main thread even if we don't enable it (other listeners might enable)
-        private void StateUpdatePreview(object sender, UIStateUpdate update)
+        void StateUpdatePreview(object sender,  UIStateUpdate update)
         {
             bool enable;
             if (update.Update == UIStateUpdate.UpdateType.FormulaEditTextChange)
@@ -117,39 +120,33 @@ namespace ExcelDna.IntelliSense
             }
 
             if (enable)
-            {
                 update.EnableUpdateEvent();
-            }
         }
 
         // Runs on the UIMonitor's automation thread - return true if we might want to process
-        private bool ShouldProcessFunctionListSelectedItemChange(string selectedItemText)
+        bool ShouldProcessFunctionListSelectedItemChange(string selectedItemText)
         {
             if (_descriptionToolTip?.Visible == true)
-            {
                 return true;
-            }
-
+            
             return _functionInfoMap.ContainsKey(selectedItemText);
         }
 
         // Runs on the UIMonitor's automation thread - return true if we might want to process
-        private bool ShouldProcessFormulaEditTextChange(string formulaPrefix)
+        bool ShouldProcessFormulaEditTextChange(string formulaPrefix)
         {
             // CAREFUL: Because of threading, this might run before FormulaEditStart!
 
             if (_argumentsToolTip?.Visible == true)
-            {
                 return true;
-            }
 
             // TODO: Why do this twice....?
-            if (FormulaParser.TryGetFormulaInfo(formulaPrefix, out var functionName, out var currentArgIndex))
+            string functionName;
+            int currentArgIndex;
+            if (FormulaParser.TryGetFormulaInfo(formulaPrefix, out functionName, out currentArgIndex))
             {
                 if (_functionInfoMap.ContainsKey(functionName))
-                {
                     return true;
-                }
             }
             // Not interested...
             Debug.Print($"Not processing formula {formulaPrefix}");
@@ -158,7 +155,7 @@ namespace ExcelDna.IntelliSense
         #endregion
 
         // This runs on the main thread
-        private void StateUpdate(object sender, UIStateUpdate update)
+        void StateUpdate(object sender, UIStateUpdate update)
         {
             Debug.Print($"STATE UPDATE ({update.Update}): \r\t\t\t{update.OldState} \r\t\t=>\t{update.NewState}");
 
@@ -207,7 +204,7 @@ namespace ExcelDna.IntelliSense
                 case UIStateUpdate.UpdateType.FormulaEditEnd:
                     FormulaEditEnd();
                     break;
-
+                    
                 case UIStateUpdate.UpdateType.SelectDataSourceShow:
                 case UIStateUpdate.UpdateType.SelectDataSourceWindowChange:
                 case UIStateUpdate.UpdateType.SelectDataSourceHide:
@@ -219,7 +216,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on the main thread
-        private void UpdateFormulaEditWindow(IntPtr formulaEditWindow)
+        void UpdateFormulaEditWindow(IntPtr formulaEditWindow)
         {
             if (_formulaEditWindow != formulaEditWindow)
             {
@@ -257,29 +254,25 @@ namespace ExcelDna.IntelliSense
         //            _descriptionToolTip = new ToolTipForm(_functionListWindow);
         //            //_descriptionToolTip.OwnerHandle = _functionListWindow;
         //        }
-
+                
         //    }
         //}
 
         // Runs on the main thread
-        private void FormulaEditStart(string formulaPrefix, Rect editWindowBounds, IntPtr excelToolTipWindow)
+        void FormulaEditStart(string formulaPrefix, Rect editWindowBounds, IntPtr excelToolTipWindow)
         {
             Debug.Print($"IntelliSenseDisplay - FormulaEditStart - FormulaEditWindow: {_formulaEditWindow}, ArgumentsToolTip: {_argumentsToolTip}");
             if (_formulaEditWindow != IntPtr.Zero && _argumentsToolTip == null)
-            {
                 _argumentsToolTip = new ToolTipForm(_formulaEditWindow);
-            }
 
             // Normally we would have no formula at this point.
             // One exception is after mouse-click on the formula list, we then need to process it.
             if (!string.IsNullOrEmpty(formulaPrefix))
-            {
                 FormulaEditTextChange(formulaPrefix, editWindowBounds, excelToolTipWindow);
-            }
         }
 
         // Runs on the main thread
-        private void FormulaEditEnd()
+        void FormulaEditEnd()
         {
             Debug.Print($"IntelliSenseDisplay - FormulaEditEnd");
             // TODO: When can it be null
@@ -292,7 +285,7 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on the main thread
-        private void FormulaEditMove(Rect editWindowBounds, IntPtr excelToolTipWindow)
+        void FormulaEditMove(Rect editWindowBounds, IntPtr excelToolTipWindow)
         {
             Debug.Print($"IntelliSenseDisplay - FormulaEditMove");
             if (_argumentsToolTip == null)
@@ -300,7 +293,7 @@ namespace ExcelDna.IntelliSense
                 Logger.Display.Warn("FormulaEditMode Unexpected null Arguments ToolTip!?");
                 return;
             }
-            var topOffset = GetTopOffset(excelToolTipWindow);
+            int topOffset = GetTopOffset(excelToolTipWindow);
             try
             {
                 _argumentsToolTip.MoveToolTip((int)editWindowBounds.Left, (int)editWindowBounds.Bottom + 5, topOffset);
@@ -315,11 +308,11 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on the main thread
-        private void FormulaEditTextChange(string formulaPrefix, Rect editWindowBounds, IntPtr excelToolTipWindow)
+        void FormulaEditTextChange(string formulaPrefix, Rect editWindowBounds, IntPtr excelToolTipWindow)
         {
             Debug.Print($"^^^ FormulaEditStateChanged. CurrentPrefix: {formulaPrefix}, Thread {Thread.CurrentThread.ManagedThreadId}");
 
-            var couldGet = FormulaParser.TryGetFormulaInfo(formulaPrefix, out var functionName, out var currentArgIndex);
+            var couldGet = FormulaParser.TryGetFormulaInfo(formulaPrefix, out string functionName, out int currentArgIndex);
 
             IntelliSenseEvents.Instance.OnEditingFunction(functionName);
 
@@ -329,11 +322,12 @@ namespace ExcelDna.IntelliSense
             }
             else
             {
+                FunctionInfo functionInfo;
 
-                if (_functionInfoMap.TryGetValue(functionName, out FunctionInfo functionInfo))
+                if (_functionInfoMap.TryGetValue(functionName, out functionInfo))
                 {
                     var lineBeforeFunctionName = FormulaParser.GetLineBeforeFunctionName(formulaPrefix, functionName);
-
+                    
                     // We have a function name and we want to show info
                     if (_argumentsToolTip != null)
                     {
@@ -348,7 +342,7 @@ namespace ExcelDna.IntelliSense
                         //        Win32Helper.HideWindow(excelToolTipWindow);
                         //    }
                         //}
-                        var topOffset = GetTopOffset(excelToolTipWindow);
+                        int topOffset = GetTopOffset(excelToolTipWindow);
                         FormattedText infoText = GetFunctionIntelliSense(functionInfo, currentArgIndex);
                         try
                         {
@@ -375,11 +369,13 @@ namespace ExcelDna.IntelliSense
 
 
         // This helper just keeps us out of the Excel tooltip's way.
-        private int GetTopOffset(IntPtr excelToolTipWindow) =>
+        int GetTopOffset(IntPtr excelToolTipWindow)
+        {
             // TODO: Maybe get its height...?
-            (excelToolTipWindow == IntPtr.Zero) ? 0 : 18;
+            return (excelToolTipWindow == IntPtr.Zero) ? 0 : 18;
+        }
 
-        private void FormulaEditExcelToolTipShow(Rect editWindowBounds, IntPtr excelToolTipWindow)
+        void FormulaEditExcelToolTipShow(Rect editWindowBounds, IntPtr excelToolTipWindow)
         {
             //    // Excel tool tip has just been shown
             //    // If we're showing the arguments dialog, hide the Excel tool tip
@@ -390,7 +386,7 @@ namespace ExcelDna.IntelliSense
 
             if (_argumentsToolTip != null && _argumentsToolTip.Visible)
             {
-                var topOffset = GetTopOffset(excelToolTipWindow);
+                int topOffset = GetTopOffset(excelToolTipWindow);
                 try
                 {
                     _argumentsToolTip.MoveToolTip((int)editWindowBounds.Left, (int)editWindowBounds.Bottom + 5, topOffset);
@@ -405,32 +401,31 @@ namespace ExcelDna.IntelliSense
         }
 
         // Runs on the main thread
-        private void FunctionListShow()
+        void FunctionListShow()
         {
             Debug.Print($"IntelliSenseDisplay - FunctionListShow");
             if (_descriptionToolTip == null)
-            {
                 _descriptionToolTip = new ToolTipForm(_functionListWindow);
-            }
         }
 
         // Runs on the main thread
-        private void FunctionListHide()
+        void FunctionListHide()
         {
             Debug.Print($"IntelliSenseDisplay - FunctionListHide");
             _descriptionToolTip?.Hide();
         }
 
         // Runs on the main thread
-        private void FunctionListSelectedItemChange(string selectedItemText, Rect selectedItemBounds, Rect listBounds)
+        void FunctionListSelectedItemChange(string selectedItemText, Rect selectedItemBounds, Rect listBounds)
         {
             Logger.Display.Verbose($"IntelliSenseDisplay - PopupListSelectedItemChanged - {selectedItemText} List/Item Bounds: {listBounds} / {selectedItemBounds}");
 
+            FunctionInfo functionInfo;
             if (!string.IsNullOrEmpty(selectedItemText) &&
-                _functionInfoMap.TryGetValue(selectedItemText, out FunctionInfo functionInfo))
+                _functionInfoMap.TryGetValue(selectedItemText, out functionInfo))
             {
                 // It's ours!
-                IEnumerable<TextLine> descriptionLines = GetFunctionDescriptionOrNull(functionInfo);
+                var descriptionLines = GetFunctionDescriptionOrNull(functionInfo);
                 if (descriptionLines != null)
                 {
                     try
@@ -458,8 +453,8 @@ namespace ExcelDna.IntelliSense
             // Not ours or no description
             _descriptionToolTip?.Hide();
         }
-
-        private void FunctionListMove(Rect selectedItemBounds, Rect listBounds)
+        
+        void FunctionListMove(Rect selectedItemBounds, Rect listBounds)
         {
             try
             {
@@ -480,19 +475,16 @@ namespace ExcelDna.IntelliSense
 
         // TODO: Performance / efficiency - cache these somehow
         // TODO: Probably not a good place for LINQ !?
-        private static readonly string[] s_newLineStringArray = { Environment.NewLine };
-
-        private IEnumerable<TextLine> GetFunctionDescriptionOrNull(FunctionInfo functionInfo)
+        static readonly string[] s_newLineStringArray = { Environment.NewLine };
+        IEnumerable<TextLine> GetFunctionDescriptionOrNull(FunctionInfo functionInfo)
         {
             var description = functionInfo.Description;
             if (string.IsNullOrEmpty(description))
-            {
                 return null;
-            }
 
             return description.Split(s_newLineStringArray, StringSplitOptions.None)
-                              .Select(line =>
-                                new TextLine {
+                              .Select(line => 
+                                new TextLine { 
                                     new TextRun
                                     {
                                         Style = System.Drawing.FontStyle.Regular,
@@ -500,11 +492,11 @@ namespace ExcelDna.IntelliSense
                                     }});
         }
 
-        private FormattedText GetFunctionIntelliSense(FunctionInfo functionInfo, int currentArgIndex)
+        FormattedText GetFunctionIntelliSense(FunctionInfo functionInfo, int currentArgIndex)
         {
             // In case of the special params pattern (x, y, arg1, ...) we base the argument display on an expanded argument list, matching Excel's behaviour,
             // and the magic expansion in the function wizard.
-            List<FunctionInfo.ArgumentInfo> argumentList = GetExpandedArgumentList(functionInfo, currentArgIndex);
+            var argumentList = GetExpandedArgumentList(functionInfo, currentArgIndex);
 
             var nameLine = new TextLine { new TextRun { Text = functionInfo.Name, LinkAddress = FixHelpTopic(functionInfo.HelpTopic) } };
             nameLine.Add(new TextRun { Text = "(" });
@@ -535,29 +527,29 @@ namespace ExcelDna.IntelliSense
                     argNames = argumentList.Skip(currentArgIndex + 1).Select(arg => arg.Name).ToArray();
                     if (argNames.Length >= 1)
                     {
-                        nameLine.Add(new TextRun { Text = _argumentSeparator + string.Join(_argumentSeparator, argNames) });
+                        nameLine.Add(new TextRun {Text = _argumentSeparator + string.Join(_argumentSeparator, argNames)});
                     }
                 }
             }
             nameLine.Add(new TextRun { Text = ")" });
 
-            IEnumerable<TextLine> descriptionLines = GetFunctionDescriptionOrNull(functionInfo);
+            var descriptionLines = GetFunctionDescriptionOrNull(functionInfo);
 
             var formattedText = new FormattedText { nameLine, descriptionLines };
 
             if (argumentList.Count > currentArgIndex)
             {
-                FunctionInfo.ArgumentInfo currentArgument = argumentList[currentArgIndex];
+                var currentArgument = argumentList[currentArgIndex];
                 IntelliSenseEvents.Instance.OnEditingArgument(currentArgument.Name, currentArgIndex);
 
-                IEnumerable<TextLine> description = GetArgumentDescription(currentArgument);
+                var description = GetArgumentDescription(currentArgument);
 
                 if (description != null)
                 {
                     formattedText.Add(description);
                 }
 
-                foreach (TextLine additionalDescriptionLine in IntelliSenseEvents.Instance.RaiseCollectingArgumentDescription())
+                foreach (var additionalDescriptionLine in IntelliSenseEvents.Instance.RaiseCollectingArgumentDescription())
                 {
                     formattedText.Add(additionalDescriptionLine);
                 }
@@ -575,7 +567,7 @@ namespace ExcelDna.IntelliSense
         // But Excel will keep showing the vurtual argument list corresponding to the full formula.
         // There is no technical problem in getting the full formula - PenHelper will give us the required info - but tracking this throughout the IntelliSense state 
         // affects the code in a lot of places, and the benefits seem small, particularly in this case of quirky Excel behaviour.
-        private List<FunctionInfo.ArgumentInfo> GetExpandedArgumentList(FunctionInfo functionInfo, int currentArgIndex)
+        List<FunctionInfo.ArgumentInfo> GetExpandedArgumentList(FunctionInfo functionInfo, int currentArgIndex)
         {
             // Note: Using params for the last argument
             if (functionInfo.ArgumentList.Count > 1 &&
@@ -586,18 +578,16 @@ namespace ExcelDna.IntelliSense
 
                 // Take the last named argument and omit the "1" that the registration added
                 var paramsDesc = functionInfo.ArgumentList[paramsIndex].Description;
-                var paramsBaseName = functionInfo.ArgumentList[paramsIndex].Name.TrimEnd('1');
-                var currentParamsArgIndex = currentArgIndex - paramsIndex;
+                string paramsBaseName = functionInfo.ArgumentList[paramsIndex].Name.TrimEnd('1');
+                int currentParamsArgIndex = currentArgIndex - paramsIndex;
 
                 // Omit last two entries ("Arg1" and "...") from the original argument list
-                var newList = new List<FunctionInfo.ArgumentInfo>(functionInfo.ArgumentList.Take(paramsIndex))
-                {
-                    // Add back with parens the "[Arg1]"
-                    new FunctionInfo.ArgumentInfo { Name = $"[{paramsBaseName + 1}]", Description = paramsDesc }
-                };
+                var newList = new List<FunctionInfo.ArgumentInfo>(functionInfo.ArgumentList.Take(paramsIndex));
+                // Add back with parens the "[Arg1]"
+                newList.Add(new FunctionInfo.ArgumentInfo { Name = $"[{paramsBaseName + 1}]", Description = paramsDesc });
 
                 // Now if we're at Arg4 (currentParamsIndex=3) then add "[Arg2],[Arg3],[Arg4],[Arg5],..."
-                for (var i = 2; i <= currentParamsArgIndex + 2; i++)
+                for (int i = 2; i <= currentParamsArgIndex + 2; i++)
                 {
                     newList.Add(new FunctionInfo.ArgumentInfo { Name = $"[{paramsBaseName + i}]", Description = paramsDesc });
                 }
@@ -612,12 +602,10 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        private IEnumerable<TextLine> GetArgumentDescription(FunctionInfo.ArgumentInfo argumentInfo)
+        IEnumerable<TextLine> GetArgumentDescription(FunctionInfo.ArgumentInfo argumentInfo)
         {
             if (string.IsNullOrEmpty(argumentInfo.Description))
-            {
                 yield break;
-            }
 
             var lines = argumentInfo.Description.Split(s_newLineStringArray, StringSplitOptions.None);
             yield return new TextLine {
@@ -666,13 +654,10 @@ namespace ExcelDna.IntelliSense
         }
 
         // Removes the !0 that we add to make Excel happy
-        private string FixHelpTopic(string helpTopic)
+        string FixHelpTopic(string helpTopic)
         {
             if (helpTopic != null && helpTopic.EndsWith("!0"))
-            {
                 return helpTopic.Substring(0, helpTopic.Length - 2);
-            }
-
             return helpTopic;
         }
 
@@ -681,7 +666,8 @@ namespace ExcelDna.IntelliSense
         public void RegisterFunctionInfo(FunctionInfo functionInfo)
         {
             // TODO : Dictionary from KeyLookup
-            if (!_functionInfoMap.TryGetValue(functionInfo.Name, out FunctionInfo oldFunctionInfo))
+            FunctionInfo oldFunctionInfo;
+            if (!_functionInfoMap.TryGetValue(functionInfo.Name, out oldFunctionInfo))
             {
                 _functionInfoMap.Add(functionInfo.Name, functionInfo);
             }
@@ -692,6 +678,9 @@ namespace ExcelDna.IntelliSense
             }
         }
 
-        public void UnregisterFunctionInfo(FunctionInfo functionInfo) => _functionInfoMap.Remove(functionInfo.Name);
+        public void UnregisterFunctionInfo(FunctionInfo functionInfo)
+        {
+            _functionInfoMap.Remove(functionInfo.Name);
+        }
     }
 }

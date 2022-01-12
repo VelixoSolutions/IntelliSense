@@ -11,6 +11,6 @@ namespace ExcelDna.IntelliSense
     /// </summary>
     public class CollectingArgumentDescriptionEventArgs : EventArgs
     {
-        public ICollection<TextLine> AdditionalDescriptionLines { get; } = new List<TextLine>();
+        public ICollection<TextLine> AdditionalDescriptionLines { get; } = new List<TextLine>();        
     }
 }

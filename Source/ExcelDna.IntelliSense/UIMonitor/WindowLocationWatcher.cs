@@ -6,10 +6,10 @@ namespace ExcelDna.IntelliSense
 {
     public class WindowLocationWatcher : IDisposable
     {
-        private readonly IntPtr _hWnd;
-        private readonly SynchronizationContext _syncContextAuto;
-        private readonly SynchronizationContext _syncContextMain;
-        private WinEventHook _windowLocationChangeHook;
+        IntPtr _hWnd;
+        SynchronizationContext _syncContextAuto;
+        SynchronizationContext _syncContextMain;
+        WinEventHook _windowLocationChangeHook;
 
         public event EventHandler LocationChanged;
 
@@ -26,7 +26,7 @@ namespace ExcelDna.IntelliSense
             _windowLocationChangeHook.WinEventReceived += _windowLocationChangeHook_WinEventReceived;
         }
 
-        private void _windowLocationChangeHook_WinEventReceived(object sender, WinEventHook.WinEventArgs winEventArgs)
+        void _windowLocationChangeHook_WinEventReceived(object sender, WinEventHook.WinEventArgs winEventArgs)
         {
 #if DEBUG
             Logger.WinEvents.Verbose($"{winEventArgs.EventType} - Window {winEventArgs.WindowHandle:X} ({Win32Helper.GetClassName(winEventArgs.WindowHandle)} - Object/Child {winEventArgs.ObjectId} / {winEventArgs.ChildId} - Thread {winEventArgs.EventThreadId} at {winEventArgs.EventTimeMs}");
