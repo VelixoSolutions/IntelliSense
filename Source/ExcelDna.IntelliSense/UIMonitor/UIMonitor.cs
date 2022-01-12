@@ -98,9 +98,9 @@ namespace ExcelDna.IntelliSense
             Logger.Monitor.Verbose("!> PopupList SelectedItemChanged");
             //Logger.Monitor.Verbose("!> " + ReadCurrentState().ToString());
 
-            if (CurrentState is UIState.FunctionList list && _popupListWatcher.IsVisible)
+            if (CurrentState is UIState.FunctionList && _popupListWatcher.IsVisible)
             {
-                var newState = list.WithSelectedItem(_popupListWatcher.SelectedItemText, 
+                var newState = ((UIState.FunctionList)CurrentState).WithSelectedItem(_popupListWatcher.SelectedItemText, 
                                                                                      _popupListWatcher.SelectedItemBounds,
                                                                                      _popupListWatcher.ListBounds);
                 OnStateChanged(newState);
@@ -119,24 +119,24 @@ namespace ExcelDna.IntelliSense
             //Logger.Monitor.Verbose("!> " + ReadCurrentState().ToString());
 
             if (args.StateChangeType == FormulaEditWatcher.StateChangeType.TextChange &&
-                CurrentState is UIState.FormulaEdit edit)
+                CurrentState is UIState.FormulaEdit)
             {
-                var newState = edit.WithFormulaPrefix(_formulaEditWatcher.CurrentPrefix);
+                var newState = ((UIState.FormulaEdit)CurrentState).WithFormulaPrefix(_formulaEditWatcher.CurrentPrefix);
                 OnStateChanged(newState);
                 return;
             }
 
             if (args.StateChangeType == FormulaEditWatcher.StateChangeType.Move)
             {
-                if (CurrentState is UIState.FunctionList list)
+                if (CurrentState is UIState.FunctionList)
                 {
-                    var newState = list.WithBounds(_formulaEditWatcher.EditWindowBounds);
+                    var newState = ((UIState.FunctionList)CurrentState).WithBounds(_formulaEditWatcher.EditWindowBounds);
                     OnStateChanged(newState);
                     return;
                 }
-                if (CurrentState is UIState.FormulaEdit formulaEdit)
+                if (CurrentState is UIState.FormulaEdit)
                 {
-                    var newState = formulaEdit.WithBounds(_formulaEditWatcher.EditWindowBounds);
+                    var newState = ((UIState.FormulaEdit)CurrentState).WithBounds(_formulaEditWatcher.EditWindowBounds);
                     OnStateChanged(newState);
                     return;
                 }
