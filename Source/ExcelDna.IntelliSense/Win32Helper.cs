@@ -81,7 +81,6 @@ namespace ExcelDna.IntelliSense
 
         struct GUITHREADINFO
         {
-#pragma warning disable CS0649
             public int cbSize;
             public int flags;
             public IntPtr hwndActive;
@@ -91,7 +90,6 @@ namespace ExcelDna.IntelliSense
             public IntPtr hwndMoveSize;
             public IntPtr hwndCaret;
             public Rectangle rcCaret;
-#pragma warning restore CS0649
         }
 
         // Different to Rectangle ...?
