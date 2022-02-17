@@ -144,10 +144,10 @@ namespace ExcelDna.IntelliSense
             if (left != _showLeft || top != _showTop || topOffset != _topOffset || listLeft != _listLeft)
             {
                 // Update the start position and the current position
-                _currentLeft = left;
-                _currentTop = top;
-                _showLeft = left;
-                _showTop = top;
+                _currentLeft = Math.Max(left, 0);   // Don't move off the screen
+                _currentTop = Math.Max(top, -topOffset);
+                _showLeft = _currentLeft;
+                _showTop = _currentTop;
                 _topOffset = topOffset;
                 _listLeft = listLeft;
             }
@@ -294,7 +294,9 @@ namespace ExcelDna.IntelliSense
                         var topicId = parts[1];
                         if (File.Exists(fileName))
                         {
-                            Help.ShowHelp(null, fileName, HelpNavigator.TopicId, topicId);
+                            dynamic app = ExcelDna.Integration.ExcelDnaUtil.Application;
+                            app.Help(fileName, topicId);
+                            // Help.ShowHelp(null, fileName, HelpNavigator.TopicId, topicId);
                         }
                         else
                         {
@@ -306,7 +308,9 @@ namespace ExcelDna.IntelliSense
                         // Just show the file ...?
                         if (File.Exists(address))
                         {
-                            Help.ShowHelp(null, address, HelpNavigator.TableOfContents);
+                            dynamic app = ExcelDna.Integration.ExcelDnaUtil.Application;
+                            app.Help(address); 
+                            // Help.ShowHelp(null, address, HelpNavigator.TableOfContents);
                         }
                         else
                         {
@@ -500,6 +504,9 @@ namespace ExcelDna.IntelliSense
                         _currentLeft = _listLeft.Value - width - leftPadding;
                     }
                 }
+
+                if (_currentLeft < 0)
+                    _currentLeft = 0;
             }
 
             // Mimic Excel behaviour: it never goes beyond the screen's leftmost

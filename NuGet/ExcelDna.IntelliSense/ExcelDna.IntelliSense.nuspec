@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>ExcelDna.IntelliSense</id>
-        <version>1.3.0</version>
+        <version>1.5.1</version>
         <title>Excel-DNA IntelliSense Extension</title>
         <authors>Excel-DNA Contributors</authors>
         <owners>Excel-DNA Contributors</owners>
@@ -14,11 +14,13 @@
         <summary>Excel-DNA IntelliSense is an extension library that can be added to an Excel-DNA add-in to provide an integrated IntelliSense server, providing IntelliSense services for all loaded Excel-DNA add-ins and appropriately configured VBA functions.</summary>
         <tags>excel exceldna udf excel-dna intellisense</tags>
         <dependencies>
-          <dependency id="ExcelDna.Integration" version="1.1.0" />
+          <group targetFramework=".NETFramework4.5.2" >
+            <dependency id="ExcelDna.Integration" version="[1.5.1]" />
+          </group>
         </dependencies>
     </metadata>
     <files>
-      <file src="..\..\Source\ExcelDna.IntelliSense\bin\Release\ExcelDna.IntelliSense.dll" target="lib\net40\ExcelDna.IntelliSense.dll" />
-      <file src="..\..\Source\ExcelDna.IntelliSense\bin\Release\ExcelDna.IntelliSense.pdb" target="lib\net40\ExcelDna.IntelliSense.pdb" />
+      <file src="..\..\Source\ExcelDna.IntelliSense\bin\Release\ExcelDna.IntelliSense.dll" target="lib\net452\ExcelDna.IntelliSense.dll" />
+      <file src="..\..\Source\ExcelDna.IntelliSense\bin\Release\ExcelDna.IntelliSense.pdb" target="lib\net452\ExcelDna.IntelliSense.pdb" />
     </files>
 </package>
