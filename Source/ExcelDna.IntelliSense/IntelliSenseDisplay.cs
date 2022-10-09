@@ -437,7 +437,8 @@ namespace ExcelDna.IntelliSense
                             left: (int)listBounds.Right + DescriptionLeftMargin,
                             top: (int)selectedItemBounds.Bottom - 18,
                             topOffset: 0,
-                            listLeft: (int)selectedItemBounds.Left);
+                            listLeft: (int)selectedItemBounds.Left,
+                            listTop: (int)selectedItemBounds.Top);
                         return;
                     }
                     catch (Exception ex)
@@ -463,7 +464,8 @@ namespace ExcelDna.IntelliSense
                    left: (int)listBounds.Right + DescriptionLeftMargin,
                    top: (int)selectedItemBounds.Bottom - 18,
                    topOffset: 0,
-                   listLeft: (int)selectedItemBounds.Left);
+                   listLeft: (int)selectedItemBounds.Left,
+                   listTop: (int)selectedItemBounds.Top);
             }
             catch (Exception ex)
             {
