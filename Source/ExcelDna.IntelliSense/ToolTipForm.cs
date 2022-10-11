@@ -138,10 +138,6 @@ namespace ExcelDna.IntelliSense
             
             left += _linePrefixWidth;
 
-            // Mimic Excel native tooltip behaviour: it never goes beyond the screen's leftmost boundary.
-            // -
-            // left = Math.Max(0, left);
-
             if (left != _showLeft || top != _showTop || topOffset != _topOffset || listLeft != _listLeft || listTop != _listTop)
             if (left != _showLeft || top != _showTop || topOffset != _topOffset || listLeft != _listLeft)
             {
@@ -549,9 +545,9 @@ namespace ExcelDna.IntelliSense
             // boundary and does not truncate at the bottom - it always stays on
             // the screen in full.
             // -
-            //_currentLeft = Math.Max(_currentLeft, 0);
-            //_showLeft = Math.Max(_showLeft, 0);
-            //_currentTop = Math.Min(_currentTop, workingArea.Bottom - _topOffset - height);
+            _currentLeft = Math.Max(_currentLeft, workingArea.Left);
+            _showLeft = Math.Max(_showLeft, 0);
+            _currentTop = Math.Min(_currentTop, workingArea.Bottom - _topOffset - height);
 
             SetBounds(_currentLeft, _currentTop + _topOffset, width, height);
         }
