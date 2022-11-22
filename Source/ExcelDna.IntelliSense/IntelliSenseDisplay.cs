@@ -348,6 +348,7 @@ namespace ExcelDna.IntelliSense
                         //}
                         int topOffset = GetTopOffset(excelToolTipWindow);
                         FormattedText infoText = GetFunctionIntelliSense(functionInfo, currentArgIndex);
+
                         try
                         {
                             _argumentsToolTip.ShowToolTip(infoText, lineBeforeFunctionName, (int)editWindowBounds.Left, (int)editWindowBounds.Bottom + 5, topOffset);
@@ -355,8 +356,11 @@ namespace ExcelDna.IntelliSense
                         catch (Exception ex)
                         {
                             Logger.Display.Warn($"IntelliSenseDisplay - FormulaEditTextChange Error - {ex}");
+
                             _argumentsToolTip.Dispose();
                             _argumentsToolTip = null;
+
+                            IntelliSenseEvents.Instance.RaiseExceptionNotification(ex);
                         }
                     }
                     else
@@ -398,8 +402,11 @@ namespace ExcelDna.IntelliSense
                 catch (Exception ex)
                 {
                     Logger.Display.Warn($"IntelliSenseDisplay - FormulaEditExcelToolTipShow Error - {ex}");
+
                     _argumentsToolTip.Dispose();
                     _argumentsToolTip = null;
+
+                    IntelliSenseEvents.Instance.RaiseExceptionNotification(ex);
                 }
             }
         }
@@ -447,9 +454,13 @@ namespace ExcelDna.IntelliSense
                     catch (Exception ex)
                     {
                         Logger.Display.Warn($"IntelliSenseDisplay - PopupListSelectedItemChanged Error - {ex}");
+
                         // Recycle the _DescriptionToolTip - won't show now, but should for the next function
                         _descriptionToolTip.Dispose();
                         _descriptionToolTip = null;
+
+                        IntelliSenseEvents.Instance.RaiseExceptionNotification(ex);
+
                         return;
                     }
                 }
@@ -473,9 +484,12 @@ namespace ExcelDna.IntelliSense
             catch (Exception ex)
             {
                 Logger.Display.Warn($"IntelliSenseDisplay - FunctionListMove Error - {ex}");
+                
                 // Recycle the _DescriptionToolTip - won't show now, but should for the next function
                 _descriptionToolTip?.Dispose();
                 _descriptionToolTip = null;
+
+                IntelliSenseEvents.Instance.RaiseExceptionNotification(ex);
             }
         }
 
