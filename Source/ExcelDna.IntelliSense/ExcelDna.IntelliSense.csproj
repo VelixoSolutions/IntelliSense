@@ -95,7 +95,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ExcelDna.Integration">
-      <Version>1.6.1-alpha6</Version>
+      <Version>1.6.1-beta1</Version>
     </PackageReference>
     <PackageReference Include="ExcelDna.Interop">
       <Version>14.0.1</Version>
