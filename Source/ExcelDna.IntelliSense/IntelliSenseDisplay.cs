@@ -302,9 +302,12 @@ namespace ExcelDna.IntelliSense
             catch (Exception ex)
             {
                 Logger.Display.Warn($"IntelliSenseDisplay - FormulaEditMove Error - {ex}");
+
                 // Recycle the Arguments ToolTip - won't show now, but should for the next function
                 _argumentsToolTip.Dispose();
                 _argumentsToolTip = null;
+
+                IntelliSenseEvents.Instance.RaiseExceptionNotification(ex);
             }
         }
 

@@ -30,6 +30,8 @@ namespace ExcelDna.IntelliSense
 
         public event EventHandler<CollectingArgumentDescriptionEventArgs>? OnCollectingAdditionalArgumentDescription;
 
+        public event EventHandler<ExceptionEventArgs>? OnException;
+
         internal event EventHandler? OnIntellisenseInvalidated;
 
         public void Invalidate() => OnIntellisenseInvalidated?.Invoke(this, EventArgs.Empty);
@@ -47,11 +49,26 @@ namespace ExcelDna.IntelliSense
                         ? null as (string, int)?
                         : (argumentName, argumentIndex.Value));
 
+        internal void RaiseExceptionNotification(Exception exception)
+        {
+            var eventArgs = new ExceptionEventArgs(exception);
+
+            try
+            {
+                OnException?.Invoke(this, eventArgs);
+            }
+            catch
+            {
+                // Should not affect internal logic.
+                // -
+            }
+        }
+
         internal IEnumerable<TextLine> RaiseCollectingArgumentDescription()
         {
             var eventArgs = new CollectingArgumentDescriptionEventArgs();
 
-            OnCollectingAdditionalArgumentDescription?.Invoke(null, eventArgs);
+            OnCollectingAdditionalArgumentDescription?.Invoke(this, eventArgs);
 
             return eventArgs.AdditionalDescriptionLines;
         }

@@ -51,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Events\CollectingArgumentDescriptionEventArgs.cs" />
+    <Compile Include="Events\ErrorEventArgs.cs" />
     <Compile Include="Events\GetExcelListSeparatorService.cs" />
     <Compile Include="Events\IGetExcelListSeparator.cs" />
     <Compile Include="Events\IIntelliSenseEvents.cs" />

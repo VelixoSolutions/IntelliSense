@@ -8,6 +8,8 @@ namespace ExcelDna.IntelliSense
     {
         public event EventHandler<CollectingArgumentDescriptionEventArgs>? OnCollectingAdditionalArgumentDescription;
 
+        public event EventHandler<ExceptionEventArgs>? OnException;
+
         public IObservable<string?> FunctionName { get; }
 
         public IObservable<(string fullFormula, string formulaPrefix)?> EditedFormula { get; }
