@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows;
@@ -35,9 +36,19 @@ namespace ExcelDna.IntelliSense
 
         public IntelliSenseDisplay(SynchronizationContext syncContextMain, UIMonitor uiMonitor)
         {
+            if (!Directory.Exists(@"C:\logs"))
+            {
+                Directory.CreateDirectory(@"C:\logs");
+            }
+
+            var logFile = @"C:\logs\velixo-logs.txt";
+            var fileListener = new TextWriterTraceListener(new FileStream(logFile, FileMode.OpenOrCreate), "myListener");
+            fileListener.TraceOutputOptions = TraceOptions.DateTime;
+            Trace.Listeners.Add(fileListener);
+
             // We expect this to be running in a macro context on the main Excel thread (ManagedThreadId = 1).
             #pragma warning disable CS0618 // Type or member is obsolete (GetCurrentThreadId) - But for debugging we want to monitor this anyway
-            Debug.Print($"### Thread creating IntelliSenseDisplay: Managed {Thread.CurrentThread.ManagedThreadId}, Native {AppDomain.GetCurrentThreadId()}");
+            Trace.TraceInformation($"### Thread creating IntelliSenseDisplay: Managed {Thread.CurrentThread.ManagedThreadId}, Native {AppDomain.GetCurrentThreadId()}");
             #pragma warning restore CS0618 // Type or member is obsolete
 
             _syncContextMain = syncContextMain;
@@ -46,12 +57,14 @@ namespace ExcelDna.IntelliSense
             _uiMonitor.StateUpdate += StateUpdate;
 
             InitializeOptions();
+
+            Trace.TraceInformation("InteliSenseDisplay - ctor");
         }
         
         // Runs on the main Excel thread in a macro context.
         void InitializeOptions()
         {
-            Logger.Display.Verbose("InitializeOptions");
+            Trace.TraceInformation("InitializeOptions");
             string listSeparator = ",";
             string standardFontName = "Calibri";
             double standardFontSize = 11.0;
@@ -81,6 +94,8 @@ namespace ExcelDna.IntelliSense
                 Logger.Initialization.Verbose($"InitializeOptions - Set StandardFontSize to {standardFontSize}");
             }
             ToolTipForm.SetStandardFont(standardFontName, standardFontSize);
+
+            Trace.TraceInformation("InteliSenseDisplay - InitializeOptions");
         }
 
         // TODO: Still not sure how to delete / unregister...
@@ -98,6 +113,7 @@ namespace ExcelDna.IntelliSense
         // Might be raised on the main thread even if we don't enable it (other listeners might enable)
         void StateUpdatePreview(object sender,  UIStateUpdate update)
         {
+            Trace.TraceInformation("InteliSenseDisplay - StateUpdatePreview: update - " + update.Update.ToString());
             bool enable;
             if (update.Update == UIStateUpdate.UpdateType.FormulaEditTextChange)
             {
@@ -127,6 +143,9 @@ namespace ExcelDna.IntelliSense
         // Runs on the UIMonitor's automation thread - return true if we might want to process
         bool ShouldProcessFunctionListSelectedItemChange(string selectedItemText)
         {
+            Trace.TraceInformation("InteliSenseDisplay - ShouldProcessFunctionListSelectedItemChange: selectedItemText - " + selectedItemText);
+            Trace.TraceInformation("InteliSenseDisplay - ShouldProcessFunctionListSelectedItemChange: _descriptionToolTip?.Visible - " + _descriptionToolTip?.Visible);
+
             if (_descriptionToolTip?.Visible == true)
                 return true;
             
@@ -137,6 +156,8 @@ namespace ExcelDna.IntelliSense
         bool ShouldProcessFormulaEditTextChange(string formulaPrefix)
         {
             // CAREFUL: Because of threading, this might run before FormulaEditStart!
+            Trace.TraceInformation("InteliSenseDisplay - ShouldProcessFormulaEditTextChange: formulaPrefix - " + formulaPrefix);
+            Trace.TraceInformation("InteliSenseDisplay - ShouldProcessFormulaEditTextChange: _argumentsToolTip?.Visible - " + _argumentsToolTip?.Visible);
 
             if (_argumentsToolTip?.Visible == true)
                 return true;
@@ -150,7 +171,7 @@ namespace ExcelDna.IntelliSense
                     return true;
             }
             // Not interested...
-            Debug.Print($"Not processing formula {formulaPrefix}");
+            Trace.TraceInformation($"Not processing formula {formulaPrefix}");
             return false;
         }
         #endregion
@@ -158,7 +179,8 @@ namespace ExcelDna.IntelliSense
         // This runs on the main thread
         void StateUpdate(object sender, UIStateUpdate update)
         {
-            Debug.Print($"STATE UPDATE ({update.Update}): \r\t\t\t{update.OldState} \r\t\t=>\t{update.NewState}");
+            Trace.TraceInformation($"STATE UPDATE ({update.Update}): \r\t\t\t{update.OldState} \r\t\t=>\t{update.NewState}");
+            Trace.TraceInformation("InteliSenseDisplay - StateUpdate: update - " + update.Update.ToString());
 
             switch (update.Update)
             {
@@ -262,7 +284,7 @@ namespace ExcelDna.IntelliSense
         // Runs on the main thread
         void FormulaEditStart(string formulaPrefix, Rect editWindowBounds, IntPtr excelToolTipWindow)
         {
-            Debug.Print($"IntelliSenseDisplay - FormulaEditStart - FormulaEditWindow: {_formulaEditWindow}, ArgumentsToolTip: {_argumentsToolTip}");
+            Trace.TraceInformation($"IntelliSenseDisplay - FormulaEditStart - FormulaEditWindow: {_formulaEditWindow}, ArgumentsToolTip: {_argumentsToolTip}");
             if (_formulaEditWindow != IntPtr.Zero && _argumentsToolTip == null)
                 _argumentsToolTip = new ToolTipForm(_formulaEditWindow);
 
@@ -275,7 +297,7 @@ namespace ExcelDna.IntelliSense
         // Runs on the main thread
         void FormulaEditEnd()
         {
-            Debug.Print($"IntelliSenseDisplay - FormulaEditEnd");
+            Trace.TraceInformation($"IntelliSenseDisplay - FormulaEditEnd");
             // TODO: When can it be null
             if (_argumentsToolTip != null)
             {
@@ -288,10 +310,10 @@ namespace ExcelDna.IntelliSense
         // Runs on the main thread
         void FormulaEditMove(Rect editWindowBounds, IntPtr excelToolTipWindow)
         {
-            Debug.Print($"IntelliSenseDisplay - FormulaEditMove");
+            Trace.TraceInformation($"IntelliSenseDisplay - FormulaEditMove");
             if (_argumentsToolTip == null)
             {
-                Logger.Display.Warn("FormulaEditMode Unexpected null Arguments ToolTip!?");
+                Trace.TraceInformation("FormulaEditMode Unexpected null Arguments ToolTip!?");
                 return;
             }
             int topOffset = GetTopOffset(excelToolTipWindow);
@@ -301,7 +323,7 @@ namespace ExcelDna.IntelliSense
             }
             catch (Exception ex)
             {
-                Logger.Display.Warn($"IntelliSenseDisplay - FormulaEditMove Error - {ex}");
+                Trace.TraceInformation($"IntelliSenseDisplay - FormulaEditMove Error - {ex}");
 
                 // Recycle the Arguments ToolTip - won't show now, but should for the next function
                 _argumentsToolTip.Dispose();
@@ -314,9 +336,10 @@ namespace ExcelDna.IntelliSense
         // Runs on the main thread
         void FormulaEditTextChange(string formulaPrefix, Rect editWindowBounds, IntPtr excelToolTipWindow)
         {
-            Debug.Print($"^^^ FormulaEditStateChanged. CurrentPrefix: {formulaPrefix}, Thread {Thread.CurrentThread.ManagedThreadId}");
+            Trace.TraceInformation($"^^^ FormulaEditStateChanged. CurrentPrefix: {formulaPrefix}, Thread {Thread.CurrentThread.ManagedThreadId}");
 
             var couldGet = FormulaParser.TryGetFormulaInfo(formulaPrefix, out string functionName, out int currentArgIndex);
+            Trace.TraceInformation("InteliSenseDisplay - FormulaEditTextChange: couldGet - " + couldGet);
 
             IntelliSenseEvents.Instance.OnEditingFunction(functionName);
 
@@ -330,11 +353,14 @@ namespace ExcelDna.IntelliSense
 
                 if (_functionInfoMap.TryGetValue(functionName, out functionInfo))
                 {
+                    Trace.TraceInformation("InteliSenseDisplay - FormulaEditTextChange: _functionInfoMap.TryGetValue - true");
+
                     var lineBeforeFunctionName = FormulaParser.GetLineBeforeFunctionName(formulaPrefix, functionName);
                     
                     // We have a function name and we want to show info
                     if (_argumentsToolTip != null)
                     {
+                        Trace.TraceInformation("InteliSenseDisplay - FormulaEditTextChange: _argumentsToolTip != null");
                         // NOTE: Hiding or moving just once doesn't help - the tooltip pops up in its original place again
                         // TODO: Try to move it off-screen, behind or make invisible
                         //if (!_argumentsToolTip.Visible)
@@ -355,7 +381,7 @@ namespace ExcelDna.IntelliSense
                         }
                         catch (Exception ex)
                         {
-                            Logger.Display.Warn($"IntelliSenseDisplay - FormulaEditTextChange Error - {ex}");
+                            Trace.TraceInformation("InteliSenseDisplay - FormulaEditTextChange: Exception - " + ex.ToString());
 
                             _argumentsToolTip.Dispose();
                             _argumentsToolTip = null;
@@ -365,7 +391,7 @@ namespace ExcelDna.IntelliSense
                     }
                     else
                     {
-                        Logger.Display.Info("FormulaEditTextChange with no arguments tooltip !?");
+                        Trace.TraceInformation("FormulaEditTextChange with no arguments tooltip !?");
                     }
                     return;
                 }
@@ -401,7 +427,7 @@ namespace ExcelDna.IntelliSense
                 }
                 catch (Exception ex)
                 {
-                    Logger.Display.Warn($"IntelliSenseDisplay - FormulaEditExcelToolTipShow Error - {ex}");
+                    Trace.TraceInformation($"IntelliSenseDisplay - FormulaEditExcelToolTipShow Error - {ex}");
 
                     _argumentsToolTip.Dispose();
                     _argumentsToolTip = null;
@@ -414,7 +440,7 @@ namespace ExcelDna.IntelliSense
         // Runs on the main thread
         void FunctionListShow()
         {
-            Debug.Print($"IntelliSenseDisplay - FunctionListShow");
+            Trace.TraceInformation($"IntelliSenseDisplay - FunctionListShow");
             if (_descriptionToolTip == null)
                 _descriptionToolTip = new ToolTipForm(_functionListWindow);
         }
@@ -422,14 +448,14 @@ namespace ExcelDna.IntelliSense
         // Runs on the main thread
         void FunctionListHide()
         {
-            Debug.Print($"IntelliSenseDisplay - FunctionListHide");
+            Trace.TraceInformation($"IntelliSenseDisplay - FunctionListHide");
             _descriptionToolTip?.Hide();
         }
 
         // Runs on the main thread
         void FunctionListSelectedItemChange(string selectedItemText, Rect selectedItemBounds, Rect listBounds)
         {
-            Logger.Display.Verbose($"IntelliSenseDisplay - PopupListSelectedItemChanged - {selectedItemText} List/Item Bounds: {listBounds} / {selectedItemBounds}");
+            Trace.TraceInformation($"IntelliSenseDisplay - PopupListSelectedItemChanged - {selectedItemText} List/Item Bounds: {listBounds} / {selectedItemBounds}");
 
             FunctionInfo functionInfo;
             if (!string.IsNullOrEmpty(selectedItemText) &&
@@ -453,7 +479,7 @@ namespace ExcelDna.IntelliSense
                     }
                     catch (Exception ex)
                     {
-                        Logger.Display.Warn($"IntelliSenseDisplay - PopupListSelectedItemChanged Error - {ex}");
+                        Trace.TraceInformation($"IntelliSenseDisplay - PopupListSelectedItemChanged Error - {ex}");
 
                         // Recycle the _DescriptionToolTip - won't show now, but should for the next function
                         _descriptionToolTip.Dispose();
@@ -483,7 +509,7 @@ namespace ExcelDna.IntelliSense
             }
             catch (Exception ex)
             {
-                Logger.Display.Warn($"IntelliSenseDisplay - FunctionListMove Error - {ex}");
+                Trace.TraceInformation($"IntelliSenseDisplay - FunctionListMove Error - {ex}");
                 
                 // Recycle the _DescriptionToolTip - won't show now, but should for the next function
                 _descriptionToolTip?.Dispose();

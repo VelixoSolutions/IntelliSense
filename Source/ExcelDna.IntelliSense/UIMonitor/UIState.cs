@@ -192,7 +192,7 @@ namespace ExcelDna.IntelliSense
         public override string ToString()
         {
             #if DEBUG
-                return $"{GetType().Name}{((this is Ready) ? "" : "\r\n")}{string.Join("\r\n", GetType().GetFields().Select(fld => $"\t{fld.Name}: {fld.GetValue(this)}"))}";
+                return $"{GetType().Name}{((this is Ready) ? Environment.StackTrace : "\r\n")}{string.Join("\r\n", GetType().GetFields().Select(fld => $"\t{fld.Name}: {fld.GetValue(this)}"))}";
             #else
                 return base.ToString();
             #endif
@@ -202,7 +202,7 @@ namespace ExcelDna.IntelliSense
         public string LogString()
         {
             #if DEBUG
-                return $"{GetType().Name}{((this is Ready) ? "" : "\t")}{string.Join("\t", GetType().GetFields().Select(fld => $"\t{fld.Name}: {fld.GetValue(this)}"))}";
+                return $"{GetType().Name}{((this is Ready) ? Environment.StackTrace : "\t")}{string.Join("\t", GetType().GetFields().Select(fld => $"\t{fld.Name}: {fld.GetValue(this)}"))}";
             #else
                 return ToString();
             #endif
@@ -348,9 +348,15 @@ namespace ExcelDna.IntelliSense
                 yield return new UIStateUpdate(oldState, tempState, UIStateUpdate.UpdateType.FormulaEditExcelToolTipChange);
                 oldState = tempState;
             }
+
             if (oldState.FormulaPrefix != newState.FormulaPrefix)
             {
                 yield return new UIStateUpdate(oldState, newState, UIStateUpdate.UpdateType.FormulaEditTextChange);
+            }
+            else
+            {
+                Trace.TraceInformation(
+                    $"UIState.GetUpdates(FormulaEdit): oldState.FormulaPrefix: {oldState.FormulaPrefix}, newState.FormulaPrefix: {newState.FormulaPrefix}");
             }
         }
 
@@ -383,11 +389,17 @@ namespace ExcelDna.IntelliSense
                 yield return new UIStateUpdate(oldState, tempState, UIStateUpdate.UpdateType.FormulaEditExcelToolTipChange);
                 oldState = (FunctionList)tempState;
             }
+            
             if (oldState.FormulaPrefix != newState.FormulaPrefix)
             {
                 var tempState = oldState.WithFormulaPrefix(newState.FormulaPrefix);
                 yield return new UIStateUpdate(oldState, tempState, UIStateUpdate.UpdateType.FormulaEditTextChange);
                 oldState = (FunctionList)tempState;
+            }
+            else
+            {
+                Trace.TraceInformation(
+                    $"UIState.GetUpdates(FunctionList): oldState.FormulaPrefix: {oldState.FormulaPrefix}, newState.FormulaPrefix: {newState.FormulaPrefix}");
             }
             if (oldState.SelectedItemText != newState.SelectedItemText ||
                 oldState.SelectedItemBounds != newState.SelectedItemBounds ||

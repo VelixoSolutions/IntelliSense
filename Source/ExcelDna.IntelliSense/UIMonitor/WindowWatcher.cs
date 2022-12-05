@@ -193,6 +193,8 @@ namespace ExcelDna.IntelliSense
         // NOTE: We are not getting OBJID_CURSOR events here - that means we expect to have a valid WindowHandle except when destroyed
         void _windowStateChangeHook_WinEventReceived(object sender, WinEventHook.WinEventArgs e)
         {
+            Trace.TraceInformation(
+                $"_windowStateChangeHook_WinEventReceived: WindowHandle {e.WindowHandle}, EventType: {e.EventType}");
             if (e.WindowHandle == IntPtr.Zero)
             {
                 Debug.Fail("WinEvent with window 0!?");

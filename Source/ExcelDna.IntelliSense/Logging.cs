@@ -96,7 +96,7 @@ namespace ExcelDna.IntelliSense
                 catch (Exception ex)
                 {
                     // CONSIDER: What to do here - e.g. Configuration errors
-                    Debug.Print($"ExcelDna.IntelliSense.TraceLogger - Error in Initialize: {ex.Message}");
+                    Trace.TraceInformation($"ExcelDna.IntelliSense.TraceLogger - Error in Initialize: {ex.Message}");
                     Close();
                     loggingEnabled = false;
                 }
@@ -166,11 +166,12 @@ namespace ExcelDna.IntelliSense
         {
             try
             {
-                TraceLogger.IntelliSenseTraceSource.TraceEvent(eventType, _eventId, message);
+                Trace.TraceInformation(
+                    $"TraceEventType: {Enum.GetName(typeof(TraceEventType), eventType)}, Event Id: {_eventId}, Message: {message}");
             }
             catch (Exception e)
             {
-                Debug.Print("ExcelDna.IntelliSense - Logger.Log error: " + e.Message);
+                Trace.TraceInformation("ExcelDna.IntelliSense - Logger.Log error: " + e.Message);
             }
         }
 
@@ -182,7 +183,7 @@ namespace ExcelDna.IntelliSense
             }
             catch (Exception e)
             {
-                Debug.Print("ExcelDna.IntelliSense - Logger.Log error: " + e.Message);
+                Trace.TraceInformation("ExcelDna.IntelliSense - Logger.Log error: " + e.Message);
             }
         }
 
@@ -236,7 +237,7 @@ namespace ExcelDna.IntelliSense
                 }
                 catch (Exception fex)
                 {
-                    Debug.Print("ExcelDna.IntelliSense - Logger.Error formatting exception " + fex.Message);
+                    Trace.TraceInformation("ExcelDna.IntelliSense - Logger.Error formatting exception " + fex.Message);
                 }
             }
             Log(TraceEventType.Error, "{0} : {1} - {2}", message, ex.GetType().Name, ex.Message);

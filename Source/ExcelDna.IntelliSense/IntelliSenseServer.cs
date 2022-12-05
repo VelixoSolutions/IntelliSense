@@ -348,7 +348,7 @@ namespace ExcelDna.IntelliSense
                 catch (Exception ex)
                 {
                     // TODO: Log
-                    Debug.Print($"!!! ERROR: Invalid RegistrationString {registrationString}: {ex.Message}");
+                    Trace.TraceInformation($"!!! ERROR: Invalid RegistrationString {registrationString}: {ex.Message}");
                     return null;
                 }
             }
@@ -487,7 +487,7 @@ namespace ExcelDna.IntelliSense
             var servers = Environment.GetEnvironmentVariable(ServersVariable);
             if (servers == null)
             {
-                Debug.Print("!!! ERROR: ServersVariable not set");
+                Trace.TraceInformation("!!! ERROR: ServersVariable not set");
                 return null;
             }
             return servers.Split(';')
@@ -514,17 +514,17 @@ namespace ExcelDna.IntelliSense
             string controlMessage = control as string;
             if (controlMessage == ControlMessageActivate)
             {
-                Debug.Print("IntelliSenseServer.Activate in AppDomain: " + AppDomain.CurrentDomain.FriendlyName);
+                Trace.TraceInformation("IntelliSenseServer.Activate in AppDomain: " + AppDomain.CurrentDomain.FriendlyName);
                 return Activate();
             }
             else if (controlMessage == ControlMessageDeactivate)
             {
-                Debug.Print("IntelliSenseServer.Deactivate in AppDomain: " + AppDomain.CurrentDomain.FriendlyName);
+                Trace.TraceInformation("IntelliSenseServer.Deactivate in AppDomain: " + AppDomain.CurrentDomain.FriendlyName);
                 return Deactivate();
             }
             else if (controlMessage == ControlMessageRefresh)
             {
-                Debug.Print("IntelliSenseServer.Refresh in AppDomain: " + AppDomain.CurrentDomain.FriendlyName);
+                Trace.TraceInformation("IntelliSenseServer.Refresh in AppDomain: " + AppDomain.CurrentDomain.FriendlyName);
                 if (!_isActive)
                 {
                     // Something went wrong...

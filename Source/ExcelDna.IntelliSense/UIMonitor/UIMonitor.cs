@@ -221,9 +221,17 @@ namespace ExcelDna.IntelliSense
         // Filter the states changes (on the automation thread) and then raise changes (on the main thread)
         void OnStateChanged(UIState newStateOrNull = null)
         {
+            
             var oldState = CurrentState;
             if (newStateOrNull == null)
+            {
                 newStateOrNull = ReadCurrentState();
+                Trace.TraceInformation($"UIMonitor.ReadCurrentState: {newStateOrNull.LogString()}");
+            }
+            else
+            {
+                Trace.TraceInformation($"UIMonitor.OnStateChanged: {newStateOrNull.LogString()}");
+            }
 
             // Debug.Print($"NEWSTATE: {newStateOrNull.ToString()} // {(newStateOrNull is UIState.Ready ? Environment.StackTrace : string.Empty)}");
 
