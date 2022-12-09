@@ -212,18 +212,23 @@ namespace ExcelDna.IntelliSense
                     }
                     break;
                 case WindowWatcher.WindowChangedEventArgs.ChangeType.Unfocus:
-                    if (_formulaEditFocus == FormulaEditFocus.InCellEdit)
-                    {
-                        Logger.WindowWatcher.Verbose($"FormulaEdit - InCellEdit Unfocus");
-                        _formulaEditFocus = FormulaEditFocus.None;
-                        _updateEditStateAfterTimeout.Signal();
-                    }
+                    Logger.WindowWatcher.Verbose($"FormulaEdit - InCellEdit Unfocus");
                     break;
                 case WindowWatcher.WindowChangedEventArgs.ChangeType.Show:
                     Logger.WindowWatcher.Verbose($"FormulaEdit - InCellEdit Show");
+                    if (_formulaEditFocus == FormulaEditFocus.None)
+                    {
+                        _formulaEditFocus = FormulaEditFocus.InCellEdit;
+                        _updateEditStateAfterTimeout.Signal();
+                    }
                     break;
                 case WindowWatcher.WindowChangedEventArgs.ChangeType.Hide:
                     Logger.WindowWatcher.Verbose($"FormulaEdit - InCellEdit Hide");
+                    if (_formulaEditFocus == FormulaEditFocus.InCellEdit)
+                    {
+                        _formulaEditFocus = FormulaEditFocus.None;
+                        _updateEditStateAfterTimeout.Signal();
+                    }
                     break;
                 case WindowWatcher.WindowChangedEventArgs.ChangeType.LocationChange:
                     if (e.ObjectId == WindowWatcher.WindowChangedEventArgs.ChangeObjectId.Caret)
