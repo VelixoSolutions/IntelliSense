@@ -221,6 +221,9 @@ namespace ExcelDna.IntelliSense
                    winEvent == WinEvent.EVENT_SYSTEM_MOVESIZESTART ||   // Only for the on-demand hook
                    winEvent == WinEvent.EVENT_SYSTEM_MOVESIZEEND ||   // Only for the on-demand hook
                    winEvent == WinEvent.EVENT_OBJECT_SELECTION ||           // Only for the PopupList
+                   // NB: Including the next event 'EVENT_OBJECT_LOCATIONCHANGE (0x800B = 32779)' without the check for 'OBJID_CARET'
+                   // will cause the Excel main window to lag when dragging.
+                   // This drag issue seems to have been introduced with an Office update around November 2022.
                    (winEvent == WinEvent.EVENT_OBJECT_LOCATIONCHANGE && idObject == WinEventObjectId.OBJID_CARET) ||
                    winEvent == WinEvent.EVENT_SYSTEM_CAPTURESTART;
         }
