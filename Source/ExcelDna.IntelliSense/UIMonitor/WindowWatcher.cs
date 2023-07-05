@@ -160,6 +160,14 @@ namespace ExcelDna.IntelliSense
             _windowStateChangeHooks.Add(new WinEventHook(WinEventHook.WinEvent.EVENT_OBJECT_CREATE, WinEventHook.WinEvent.EVENT_OBJECT_STATECHANGE, syncContextAuto, syncContextMain, IntPtr.Zero));
             _windowStateChangeHooks.Add(new WinEventHook(WinEventHook.WinEvent.EVENT_SYSTEM_CAPTURESTART, WinEventHook.WinEvent.EVENT_SYSTEM_CAPTURESTART, syncContextAuto, syncContextMain, IntPtr.Zero));
 
+            _windowStateChangeHooks.Add(
+                new WinEventHook(
+                    WinEventHook.WinEvent.EVENT_OBJECT_LOCATIONCHANGE,
+                    WinEventHook.WinEvent.EVENT_OBJECT_LOCATIONCHANGE,
+                    syncContextAuto,
+                    syncContextAuto,
+                    IntPtr.Zero));
+
             foreach (var windowStateChangeHook in _windowStateChangeHooks)
             {
                 windowStateChangeHook.WinEventReceived += _windowStateChangeHook_WinEventReceived;
