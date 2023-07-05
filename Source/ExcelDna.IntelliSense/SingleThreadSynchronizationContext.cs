@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace ExcelDna.IntelliSense
 {
@@ -46,6 +47,7 @@ namespace ExcelDna.IntelliSense
         public void RunOnCurrentThread()
         {
             _threadId = Thread.CurrentThread.ManagedThreadId;
+            Application.Run();
             Logger.Monitor.Info($"SingleThreadSynchronizationContext Running (Thread {_threadId})!");
             foreach (var workItem in _queue.GetConsumingEnumerable())
             {
