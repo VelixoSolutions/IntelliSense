@@ -36,7 +36,7 @@ namespace ExcelDna.IntelliSense
             var threadAuto = new Thread(RunUIAutomation);
             threadAuto.IsBackground = true;
             threadAuto.Name = "ExcelDna.Intellisense.WatcherThread";
-            threadAuto.SetApartmentState(ApartmentState.STA);
+            threadAuto.SetApartmentState(ApartmentState.MTA);
             threadAuto.Start();
         }
 
