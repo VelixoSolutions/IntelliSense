@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace ExcelDna.IntelliSense
 {
@@ -160,12 +161,23 @@ namespace ExcelDna.IntelliSense
             _windowStateChangeHooks.Add(new WinEventHook(WinEventHook.WinEvent.EVENT_OBJECT_CREATE, WinEventHook.WinEvent.EVENT_OBJECT_STATECHANGE, syncContextAuto, syncContextMain, IntPtr.Zero));
             _windowStateChangeHooks.Add(new WinEventHook(WinEventHook.WinEvent.EVENT_SYSTEM_CAPTURESTART, WinEventHook.WinEvent.EVENT_SYSTEM_CAPTURESTART, syncContextAuto, syncContextMain, IntPtr.Zero));
 
+            var threadSyncContext = new SynchronizationContext();
+            var locationChangeWatcherThread = new Thread(() =>
+            {
+                SynchronizationContext.SetSynchronizationContext(threadSyncContext);
+                Application.Run();
+            });
+            locationChangeWatcherThread.IsBackground = true;
+            locationChangeWatcherThread.Name = "ExcelDna.IntelliSense.LocationChangeWatcherThread";
+            locationChangeWatcherThread.SetApartmentState(ApartmentState.STA);
+            locationChangeWatcherThread.Start();
+
             _windowStateChangeHooks.Add(
                 new WinEventHook(
                     WinEventHook.WinEvent.EVENT_OBJECT_LOCATIONCHANGE,
                     WinEventHook.WinEvent.EVENT_OBJECT_LOCATIONCHANGE,
                     syncContextAuto,
-                    syncContextAuto,
+                    threadSyncContext,
                     IntPtr.Zero));
 
             foreach (var windowStateChangeHook in _windowStateChangeHooks)
