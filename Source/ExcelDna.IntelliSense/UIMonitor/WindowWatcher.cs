@@ -70,6 +70,9 @@ namespace ExcelDna.IntelliSense
                         Type = ChangeType.Focus;
                         break;
                     case WinEventHook.WinEvent.EVENT_OBJECT_LOCATIONCHANGE:
+                        Type = ChangeType.LocationChange;
+                        ObjectId = ChangeObjectId.Caret;
+                        break;
                     case WinEventHook.WinEvent.EVENT_SYSTEM_MOVESIZEEND:
                         Type = ChangeType.LocationChange;
                         break;
@@ -114,7 +117,11 @@ namespace ExcelDna.IntelliSense
         const string _nuiDialogClass = "NUIDialog";
         const string _selectDataSourceTitle = "Select Data Source";     // TODO: How does localization work?
 
+        readonly SynchronizationContext _syncContextAuto;
+        readonly SynchronizationContext _syncContextMain;
+
         List<WinEventHook> _windowStateChangeHooks = new List<WinEventHook>();
+        WinEventHook _locationChangeEventHook;
 
         // These track keyboard focus for Windows in the Excel process
         // Used to synthesize the 'Unfocus' change events
@@ -135,6 +142,9 @@ namespace ExcelDna.IntelliSense
 
         public WindowWatcher(SynchronizationContext syncContextAuto, SynchronizationContext syncContextMain)
         {
+            _syncContextAuto = syncContextAuto;
+            _syncContextMain = syncContextMain;
+
 #pragma warning disable CS0618 // Type or member is obsolete (GetCurrentThreadId) - But for debugging we want to monitor this anyway
             // Debug.Print($"### WindowWatcher created on thread: Managed {Thread.CurrentThread.ManagedThreadId}, Native {AppDomain.GetCurrentThreadId()}");
 #pragma warning restore CS0618 // Type or member is obsolete
@@ -152,13 +162,25 @@ namespace ExcelDna.IntelliSense
             //  EVENT_OBJECT_SELECTIONREMOVE
             //  EVENT_OBJECT_SELECTIONWITHIN
             //  EVENT_OBJECT_STATECHANGE (0x800A = 32778)
-            _windowStateChangeHooks.Add(new WinEventHook(WinEventHook.WinEvent.EVENT_OBJECT_CREATE, WinEventHook.WinEvent.EVENT_OBJECT_LOCATIONCHANGE, syncContextAuto, syncContextMain, IntPtr.Zero));
+            _windowStateChangeHooks.Add(new WinEventHook(WinEventHook.WinEvent.EVENT_OBJECT_CREATE, WinEventHook.WinEvent.EVENT_OBJECT_STATECHANGE, syncContextAuto, syncContextMain, IntPtr.Zero));
             _windowStateChangeHooks.Add(new WinEventHook(WinEventHook.WinEvent.EVENT_SYSTEM_CAPTURESTART, WinEventHook.WinEvent.EVENT_SYSTEM_CAPTURESTART, syncContextAuto, syncContextMain, IntPtr.Zero));
 
             foreach (var windowStateChangeHook in _windowStateChangeHooks)
             {
                 windowStateChangeHook.WinEventReceived += _windowStateChangeHook_WinEventReceived;
             }
+
+            SetUpLocationChangeEventListener();
+        }
+
+        void SetUpLocationChangeEventListener()
+        {
+            // NB: Including the next event 'EVENT_OBJECT_LOCATIONCHANGE (0x800B = 32779)' will cause the Excel main window to lag when dragging.
+            // This drag issue seems to have been introduced with an Office update around November 2022.
+            // To workaround this, we unhook from this event upon encountering EVENT_SYSTEM_MOVESIZESTART and then hook again upon encountering
+            // EVENT_SYSTEM_MOVESIZEEND (see UnhookFromLocationChangeUponDraggingExcelMainWindow).
+            _locationChangeEventHook = new WinEventHook(WinEventHook.WinEvent.EVENT_OBJECT_LOCATIONCHANGE, WinEventHook.WinEvent.EVENT_OBJECT_LOCATIONCHANGE, _syncContextAuto, _syncContextMain, IntPtr.Zero);
+            _locationChangeEventHook.WinEventReceived += _windowStateChangeHook_WinEventReceived;
         }
 
         // Runs on the Automation thread (before syncContextAuto starts pumping)
@@ -208,6 +230,22 @@ namespace ExcelDna.IntelliSense
             return true;
         }
 
+        // This allows us to temporarily stop listening to EVENT_OBJECT_LOCATIONCHANGE events when the user is dragging the Excel main window.
+        // Otherwise we are going to bump into https://github.com/Excel-DNA/IntelliSense/issues/123. The rest of the time we need to stay
+        // hooked to EVENT_OBJECT_LOCATIONCHANGE for IntelliSense to work correctly (see https://github.com/Excel-DNA/IntelliSense/issues/124).
+        void UnhookFromLocationChangeUponDraggingExcelMainWindow(WinEventHook.WinEventArgs e)
+        {
+            if (e.EventType == WinEventHook.WinEvent.EVENT_SYSTEM_MOVESIZESTART)
+            {
+                _syncContextMain.Post(_ => _locationChangeEventHook?.Dispose(), null);
+            }
+
+            if (e.EventType == WinEventHook.WinEvent.EVENT_SYSTEM_MOVESIZEEND)
+            {
+                _syncContextMain.Post(_ => SetUpLocationChangeEventListener(), null);
+            }
+        }
+
         // This runs on the Automation thread, via SyncContextAuto passed in to WinEventHook when we created this WindowWatcher
         // CONSIDER: We would be able to run all the watcher updates from WinEvents, including Location and Selection changes,
         //           but since WinEvents have no hwnd filter, UIAutomation events might be more efficient.
@@ -219,6 +257,9 @@ namespace ExcelDna.IntelliSense
             {
                 Debug.Fail("WinEvent with window 0!?");
             }
+
+            UnhookFromLocationChangeUponDraggingExcelMainWindow(e);
+
             if (e.EventType == WinEventHook.WinEvent.EVENT_OBJECT_FOCUS)
             {
                 // Might raise change event for Unfocus
@@ -317,6 +358,7 @@ namespace ExcelDna.IntelliSense
             }
 
             _windowStateChangeHooks = new List<WinEventHook>();
+            _locationChangeEventHook.Dispose();
         }
     }
 
